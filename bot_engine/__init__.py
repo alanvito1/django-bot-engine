@@ -20,7 +20,7 @@ class HandlersStorage:
     _menu_items = {}
 
     # def __init__(self):
-    #     self._chatbot_classes['bot_api.chatbots:EchoBot'] = EchoBot
+    #     self._chatbot_classes['bot_engine.chatbots:EchoBot'] = EchoBot
 
     def chatbot(self, cls):
         wrapped_class = '%s:%s' % (cls.__module__, cls.__name__)

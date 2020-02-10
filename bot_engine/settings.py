@@ -25,7 +25,7 @@ from django.utils.module_loading import import_string
 DEFAULTS = {
     # Bot API
     'BOT_API_CLIENT_MODEL': '',
-    'DEFAULT_BOT': 'bot_api.chatbots.EchoBot',
+    'DEFAULT_BOT': 'bot_engine.chatbots.EchoBot',
     'SUB_MODULES_NAME': 'chatbots',
     'BUTTON_PREFIX': 'BTN_',
     'MENU_ITEM_PREFIX': 'MI_BTN_',

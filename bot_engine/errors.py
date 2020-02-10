@@ -5,7 +5,13 @@ class BotApiError(Exception):
     """
 
 
-class IMApiException(BotApiError):
+class MessengerException(BotApiError):
     """
     Instant Messenger exception class
+    """
+
+
+class NotSubscribed(BotApiError):
+    """
+    Account not subscribed
     """
