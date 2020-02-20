@@ -126,10 +126,10 @@ class Messenger(models.Model):
         return f'<Messenger ({self.api_type}:{self.token[:10]})>'
 
     def get_webhook_enable_url(self):
-        return reverse('bot_api:enable', kwargs={'id': self.id})
+        return reverse('bot_engine:enable', kwargs={'id': self.id})
 
     def get_webhook_disable_url(self):
-        return reverse('bot_api:disable', kwargs={'id': self.id})
+        return reverse('bot_engine:disable', kwargs={'id': self.id})
 
     def token_hash(self) -> str:
         if not self.hash:
