@@ -9,7 +9,7 @@ services:
     environment:
       - POSTGRES_DB=examplebot
       - POSTGRES_USER=examplebot
-      - POSTGRES_PASSWORD=examplebotPa$S
+      - POSTGRES_PASSWORD=examplebotPa$$S
     volumes:
       - ./pgdata/:/var/lib/postgresql/data/
 

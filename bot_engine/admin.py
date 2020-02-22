@@ -79,8 +79,8 @@ class MessengerAdmin(admin.ModelAdmin):
     actions = ('enable_webhook', 'disable_webhook')
     fieldsets = (
         (None, {
-            'fields': ('title', 'api_type', 'is_active', 'handler',
-                       'welcome_text'),
+            'fields': ('title', ('api_type', 'is_active'), 'handler',
+                       'welcome_text', 'menu', 'logo'),
             'classes': ('extrapretty', 'wide'),
         }),
         (_('Authenticate'), {
@@ -131,7 +131,7 @@ class AccountAdmin(admin.ModelAdmin):
     actions = ('send_ping', )
     fieldsets = (
         (None, {
-            'fields': ('id', 'is_active', 'username', 'user', 'messenger'),
+            'fields': ('id', ('messenger', 'is_active'), 'username', 'user'),
             'classes': ('extrapretty', 'wide'),
         }),
         (_('Info'), {
@@ -223,8 +223,8 @@ class ButtonAdmin(admin.ModelAdmin):
     # form = ButtonForm
 
     list_display = ('title', 'text', 'comment', 'next_menu',
-                    'for_staff', 'for_admin', 'is_inline', 'is_active')
-    list_filter = ('for_staff', 'for_admin', 'is_inline', 'is_active')
+                    'is_inline', 'for_staff', 'for_admin', 'is_active')
+    list_filter = ('is_inline', 'for_staff', 'for_admin', 'is_active')
     search_fields = ('title', 'text', 'message', 'comment', 'command')
     readonly_fields = ('command', )
     fieldsets = (

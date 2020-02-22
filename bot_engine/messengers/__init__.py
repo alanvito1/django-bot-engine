@@ -33,11 +33,11 @@ class MessengerType(Enum):
 
     @property
     def messenger_classes(self) -> dict:
-        return {m_type: f'bot_api.messengers.{m_type.value.capitalize()}'
+        return {m_type: f'bot_engine.messengers.{m_type.value.capitalize()}'
                 for m_type in self.__class__}
 
     @property
     def messenger_class(self) -> Optional[Type[BaseMessenger]]:
         if self == MessengerType.NONE:
             return None
-        return import_string(f'bot_api.messengers.{self.value.capitalize()}')
+        return import_string(f'bot_engine.messengers.{self.value.capitalize()}')

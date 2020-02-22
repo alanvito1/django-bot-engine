@@ -11,7 +11,13 @@ class MessengerException(BotApiError):
     """
 
 
+class RequestsLimitExceeded(BotApiError):
+    """
+    Exception class a Request limit exceeded
+    """
+
+
 class NotSubscribed(BotApiError):
     """
-    Account not subscribed
+    Exception class a Account not subscribed
     """

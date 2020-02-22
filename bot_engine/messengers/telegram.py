@@ -58,6 +58,7 @@ class Telegram(BaseMessenger):
         #     'last_name': 'name',
         #     'username': 'name'
         # }
+        log.debug(f'User info data={data}')
         photos = self.bot.get_user_profile_photos(user_id)
         # {
         #     'total_count': 123,
@@ -68,25 +69,25 @@ class Telegram(BaseMessenger):
         #         'file_size': 123,
         #     }]
         # }
-        if photos.get('total_count') > 0:
-            photo_url = self.save_file(photos.get('photos')[0].get('id'))
+        log.debug(f'User photo data={photos}')
+        if photos.total_count > 0:
+            log.debug(f'One photo={photos.photos[0][0]}')
+            photo_url = self.save_file(photos.photos[0][0].file_id)
 
         user_info = {
-            'id': data.get('id'),
-            'username': data.get('username'),
+            'id': data.user.id,
+            'username': data.user.username,
             'info': {
                 'avatar': photo_url,
-                'first_name': data.get('first_name'),
-                'last_name': data.get('last_name'),
+                'first_name': data.user.first_name,
+                'last_name': data.user.last_name,
             }
         }
         return user_info
 
     def parse_message(self, request: Request) -> Message:
-        log.debug('Data={};'.format(request.body.decode('utf-8')))
         try:
-            json_string = request.body.decode('utf-8')
-            update = json.loads(json_string)
+            update = request.data
             message = Message(
                 message_type=MessageType.TEXT,
                 message_id=update.get('message', {}).get('message_id', ''),
@@ -102,7 +103,7 @@ class Telegram(BaseMessenger):
         Preprocess message data
         Need for Telegram API for check - message is button?
         """
-        if message.type == MessageType.TEXT:
+        if message.type == MessageType.TEXT and account.menu:
             for button in account.menu.buttons.all():
                 if message.text == button.text:
                     message.type = MessageType.BUTTON
@@ -111,7 +112,7 @@ class Telegram(BaseMessenger):
     def send_message(self, receiver: str, message: Message,
                      button_list: list = None, **kwargs) -> str:
         kb = types.ReplyKeyboardMarkup(row_width=3)
-        for btn in button_list:
+        for btn in button_list or []:
             kb.add(types.KeyboardButton(btn.text))
         return self.bot.send_message(chat_id=receiver, text=message,
                                      reply_markup=kb)

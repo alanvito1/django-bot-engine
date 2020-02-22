@@ -152,7 +152,8 @@ class Messenger(models.Model):
                                                          'menu': self.menu, }))
             if created or not account.info:
                 try:
-                    user_info = self.api.get_user_info(message.user_id)
+                    user_info = self.api.get_user_info(message.user_id,
+                                                       chat_id=message.user_id)
                     account.update(username=user_info.get('username'),
                                    info=user_info.get('info'),
                                    is_active=True)
@@ -161,7 +162,7 @@ class Messenger(models.Model):
         else:
             account = None
 
-        log.debug(f'\nMessage={message};\nAccount={account};')
+        # log.debug(f'\nMessage={message};\nAccount={account};')
 
         if message.is_service:
             if (message.type == MessageType.START and account
@@ -198,7 +199,7 @@ class Messenger(models.Model):
 
     def enable_webhook(self):
         domain = Site.objects.get_current().domain
-        url = reverse('bot_api:webhook', kwargs={'hash': self.token_hash()})
+        url = reverse('bot_engine:webhook', kwargs={'hash': self.token_hash()})
         return self.api.enable_webhook(url=f'https://{domain}{url}')
 
     def disable_webhook(self):
@@ -231,7 +232,7 @@ class AccountManager(models.Manager):
 class Account(models.Model):
     id = models.CharField(
         _('account id'), max_length=256,
-        primary_key=True)
+        primary_key=True, editable=False)
     username = models.CharField(
         _('user name'), max_length=256,
         null=True, blank=True)
@@ -332,7 +333,7 @@ class Menu(models.Model):
 
     # TODO: implement button order
     buttons = models.ManyToManyField(
-        'Button',
+        'Button', blank=True,
         verbose_name=_('buttons'), related_name='menus')
 
     updated = models.DateTimeField(
@@ -403,7 +404,8 @@ class Button(models.Model):
 
     handler = models.CharField(
         _('handler'), max_length=256,
-        default=ECHO_HANDLER, blank=True,
+        # default=ECHO_HANDLER,
+        blank=True,
         help_text=_(f'Your handler implementation must implement '
                     f'the {BUTTON_HANDLER} interface.'))
     next_menu = models.ForeignKey(

@@ -17,7 +17,7 @@ from viberbot.api.viber_requests import (
 )
 
 from .base_messenger import BaseMessenger
-from ..errors import MessengerException, NotSubscribed
+from ..errors import MessengerException, NotSubscribed, RequestsLimitExceeded
 from ..types import Message, MessageType
 
 
@@ -102,7 +102,12 @@ class Viber(BaseMessenger):
         #       "device_type":"iPhone9,4"
         #    }
         # }
-        data = self.bot.get_user_details(user_id).get('user')
+        try:
+            data = self.bot.get_user_details(user_id)
+        except Exception as err:
+            if 'failed with status: 12' in str(err):
+                raise RequestsLimitExceeded(err)
+
         user_info = {
             'id': data.get('id'),
             'username': data.get('name'),
