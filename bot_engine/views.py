@@ -1,7 +1,5 @@
 import logging
 
-from django.utils.decorators import method_decorator
-from django.views.decorators.csrf import csrf_exempt
 from rest_framework import permissions
 from rest_framework.exceptions import NotFound
 from rest_framework.response import Response
@@ -36,34 +34,26 @@ class MessengerSwitch(APIView):
         return Response()
 
 
-@method_decorator(csrf_exempt, name='dispatch')
-class MessengerCallback(APIView):
+class MessengerWebhook(APIView):
     """
-    Messengers callbacks
+    Endpoint for a Messenger's webhook
     """
     permission_classes = (permissions.AllowAny, )
 
-    # @classmethod
-    # def as_view(cls, **initkwargs):
-    #     """
-    #     This method is overridden to avoid a rare error
-    #     when not deactivating CSRF protection.
-    #     """
-    #     view = super().as_view(**initkwargs)
-    #     view.csrf_exempt = True
-    #     return view
-
     @staticmethod
     def post(request: Request, **kwargs) -> Response:
-        log.debug(f'Bot Api POST; Message={request.data};')
+        log.debug(f'Bot Engine Webhook; Message={request.data};')
         im_hash = kwargs.get('hash', '')
+        answer = None
 
         try:
             messenger = Messenger.objects.get(hash=im_hash)
             answer = messenger.dispatch(request)
         except Messenger.DoesNotExist as err:
             log.exception(f'Messenger not found; Hash={hash}; Error={err};')
-            raise NotFound('Handler not found.')
+            raise NotFound('Webhook not found.')
+        except Exception as err:
+            log.exception(f'Bot Engine Webhook; Error={err};')
 
-        log.debug(f'Bot Api POST; Answer={answer};')
+        log.debug(f'Bot Engine Webhook; Answer={answer};')
         return Response(answer)

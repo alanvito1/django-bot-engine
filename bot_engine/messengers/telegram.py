@@ -1,9 +1,10 @@
 import json
 import logging
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Tuple, Union
 
 from django.conf import settings
 from django.contrib.sites.models import Site
+from django.db.models import Model
 from rest_framework.request import Request
 # TODO: Independently implement or find a project with a more permissive license
 from telebot import TeleBot, apihelper, types
@@ -20,6 +21,9 @@ class Telegram(BaseMessenger):
     """
     IM connector for Telegram Bot API
     """
+    #############
+    # Interface #
+    #############
 
     def __init__(self, token: str, **kwargs):
         super().__init__(token, **kwargs)
@@ -98,24 +102,27 @@ class Telegram(BaseMessenger):
         except Exception as err:
             raise MessengerException(err)
 
-    def preprocess_message(self, message: Message, account) -> tuple:
-        """
-        Preprocess message data
-        Need for Telegram API for check - message is button?
-        """
+    def preprocess_message(self, message: Message, account: Model) -> Message:
         if message.type == MessageType.TEXT and account.menu:
             for button in account.menu.buttons.all():
                 if message.text == button.text:
                     message.type = MessageType.BUTTON
-        return message, account
+        return message
 
-    def send_message(self, receiver: str, message: Message,
-                     button_list: list = None, **kwargs) -> str:
+    def send_message(self, receiver: str,
+                     message: Union[Message, List[Message]]) -> List[str]:
         kb = types.ReplyKeyboardMarkup(row_width=3)
         for btn in button_list or []:
             kb.add(types.KeyboardButton(btn.text))
         return self.bot.send_message(chat_id=receiver, text=message,
                                      reply_markup=kb)
+
+    def welcome_message(self, text: str) -> Union[str, Dict[str, Any], None]:
+        return None
+
+    ################
+    # Help methods #
+    ################
 
     def save_file(self, file_id: str) -> str:
         file_name = f'{file_id}.png'

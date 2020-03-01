@@ -10,10 +10,9 @@ RUN apk update && apk add libpq && \
                                                 python3-dev \
                                                 musl-dev \
                                                 postgresql-dev && \
-    pip install -U setuptools psycopg2-binary>=2.8 && \
-    pip install -U gevent>=1.4 gunicorn[gevent]>=20.0 && \
-    apk del .build-deps && \
-    pip install -U django djangorestframework psycopg2-binary
+    pip install -U setuptools psycopg2-binary && \
+    pip install -U django djangorestframework && \
+    apk del .build-deps
 
 RUN pip install -U https://github.com/terentjew-alexey/django-bot-engine/archive/development.zip
 

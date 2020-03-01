@@ -1,10 +1,7 @@
 from __future__ import annotations
-from enum import Enum
-
-from django.utils.translation import gettext_lazy as _
 
 
-class MessageType(Enum):
+class MessageType:
     # Service types
     START = 'start'
     SUBSCRIBED = 'subscribed'
@@ -27,76 +24,157 @@ class MessageType(Enum):
     RICHMEDIA = 'richmedia'
     BUTTON = 'button'
     KEYBOARD = 'keyboard'
+    # Combined
+    MULTIPLE = 'multiple'
 
-    @classmethod
-    def service_types(cls) -> tuple:
-        return (
-            cls.START, cls.SUBSCRIBED, cls.UNSUBSCRIBED,
-            cls.DELIVERED, cls.SEEN, cls.WEBHOOK, cls.FAILED, cls.UNDEFINED,
-        )
-
-    @classmethod
-    def common_types(cls) -> tuple:
-        return (
-            cls.TEXT, cls.STICKER, cls.PICTURE, cls.AUDIO, cls.VIDEO, cls.FILE,
-            cls.CONTACT, cls.URL, cls.LOCATION, cls.RICHMEDIA, cls.KEYBOARD,
-        )
-
-    @classmethod
-    def choices(cls) -> tuple:
-        return tuple((x.value, _(x.value.capitalize())) for x in cls)
+    service_types = (START, SUBSCRIBED, UNSUBSCRIBED, DELIVERED, SEEN,
+                     WEBHOOK, FAILED, UNDEFINED, )
+    common_types = (TEXT, STICKER, PICTURE, AUDIO, VIDEO, FILE,
+                    CONTACT, URL, LOCATION, RICHMEDIA, KEYBOARD, )
+    choices = (
+        [(msg_type, msg_type.capitalize()) for msg_type in common_types] +
+        [(msg_type, msg_type.capitalize()) for msg_type in service_types]
+    )
 
 
 class Message:
-    def __init__(self, message_type: MessageType,
+    def __init__(self, message_type: str,
                  message_id: str = None,
                  user_id: str = None,
+                 im_type: str = None,
                  timestamp: int = None,
-                 text: str = None,
-                 buttons: list = None,
                  **kwargs):
         self.type = message_type
         self.id = message_id
+        self.im_type = im_type
         self.user_id = user_id
         self.timestamp = timestamp
-        self.text = text
-        self.buttons = buttons
 
-        # TODO: add messenger id and type. For what ?
+        for key, value in kwargs.items():
+            setattr(self, key, value)
 
-        self.user_name = kwargs.get('user_name')
-        self.context = kwargs.get('context')
-        self.error = kwargs.get('error')
+        # self.user_name = kwargs.get('user_name')
+        # self.context = kwargs.get('context')
+        # self.error = kwargs.get('error')
 
-        self.kwargs = kwargs
+    def __str__(self) -> str:
+        return f'Message(type={self.type}, id={self.id}, ' \
+               f'im_type={self.im_type}, user={self.user_id})'
 
-    def __str__(self):
-        return f'Message(token={self.id}, type={self.type}, account={self.user_id})'
+    def __repr__(self) -> str:
+        return f'<bot_engine.Message object ' \
+               f'(type={self.type}, im_type={self.im_type})>'
 
     @property
     def is_common(self) -> bool:
-        return self.type in MessageType.common_types()
+        return self.type in MessageType.common_types
 
     @property
     def is_service(self) -> bool:
-        return self.type in MessageType.service_types()
+        return self.type in MessageType.service_types
 
     @property
     def is_text(self) -> bool:
-        return self.type in [MessageType.TEXT, MessageType.URL]
+        return self.type in [MessageType.TEXT]
 
     @property
     def is_button(self) -> bool:
-        return self.type in [MessageType.BUTTON, MessageType.KEYBOARD]
+        return self.type in [MessageType.BUTTON]
+
+    def __add__(self, other) -> Message:
+        return Message.multiple()
 
     ##############################################
     # Class methods returning a new typed object #
     ##############################################
 
     @classmethod
-    def text(cls, text: str):
-        return cls(MessageType.TEXT, text=text)
+    def start(cls, context: str = None):
+        return cls(MessageType.START, context=context)
+
+    @classmethod
+    def subscribed(cls, context: str = None):
+        return cls(MessageType.SUBSCRIBED, context=context)
+
+    @classmethod
+    def unsubscribed(cls, context: str = None):
+        return cls(MessageType.UNSUBSCRIBED, context=context)
+
+    @classmethod
+    def delivered(cls, message_id: str):
+        return cls(MessageType.DELIVERED, message_id=message_id)
+
+    @classmethod
+    def seen(cls, message_id: str):
+        return cls(MessageType.SEEN, message_id=message_id)
+
+    @classmethod
+    def webhook(cls):
+        return cls(MessageType.WEBHOOK)
+
+    @classmethod
+    def failed(cls, text: str = None):
+        return cls(MessageType.FAILED, text=text)
+
+    @classmethod
+    def undefined(cls, text: str = None):
+        return cls(MessageType.UNDEFINED, text=text)
+
+    @classmethod
+    def text(cls, message_id: str,
+             user_id: str,
+             im_type: str,
+             timestamp: int,
+             text: str,
+             reply_id: str = None):
+        return cls(MessageType.TEXT, message_id=message_id, user_id=user_id,
+                   im_type=im_type, timestamp=timestamp, text=text)
+
+    @classmethod
+    def sticker(cls):
+        return cls(MessageType.STICKER)
+
+    @classmethod
+    def picture(cls):
+        return cls(MessageType.PICTURE)
+
+    @classmethod
+    def audio(cls):
+        return cls(MessageType.AUDIO)
+
+    @classmethod
+    def video(cls):
+        return cls(MessageType.VIDEO)
+
+    @classmethod
+    def file(cls):
+        return cls(MessageType.FILE)
+
+    @classmethod
+    def contact(cls):
+        return cls(MessageType.CONTACT)
+
+    @classmethod
+    def url(cls):
+        return cls(MessageType.URL)
+
+    @classmethod
+    def location(cls):
+        return cls(MessageType.LOCATION)
+
+    @classmethod
+    def richmedia(cls):
+        return cls(MessageType.RICHMEDIA)
+
+    @classmethod
+    def button(cls):
+        return cls(MessageType.BUTTON)
 
     @classmethod
     def keyboard(cls, buttons: list):
         return cls(MessageType.KEYBOARD, buttons=buttons)
+
+    @classmethod
+    def multiple(cls, *messages):
+        # TODO Check messages
+        return cls(MessageType.MULTIPLE, messages=messages)
