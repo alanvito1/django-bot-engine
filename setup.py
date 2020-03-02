@@ -13,10 +13,10 @@ setup(
     author_email='terentjew.alexey@gmail.com',
     packages=['bot_engine', 'bot_engine.messengers'],
     install_requires=[
-        'djangorestframework>=3.11,<4.0',
         'urllib3',
         'PySocks>=1.7',
-        'requests>=2.22',
+        'requests[socks]>=2.22',
+        'djangorestframework>=3.11,<4.0',
         'viberbot>=1.0.11',
         'pyTelegramBotAPI'
     ],

@@ -5,6 +5,7 @@ from typing import Any, Callable, List, Optional, Type
 from uuid import uuid4
 
 from django.conf import settings
+# TODO make a custom JSONField inherited from TextField for others db's
 from django.contrib.postgres.fields import JSONField
 from django.contrib.sites.models import Site
 from django.db import models
@@ -23,6 +24,8 @@ from .types import Message, MessageType
 __all__ = ('Account', 'Button', 'Menu', 'Messenger')
 
 log = logging.getLogger(__name__)
+
+DOMAIN = Site.objects.get_current().domain
 BASE_HANDLER = 'bot_engine.bot_handlers.echo_handler'
 BUTTON_HANDLER = 'bot_engine.bot_handlers.echo_handler'
 ECHO_HANDLER = 'bot_engine.bot_handlers.echo_handler'
@@ -91,7 +94,7 @@ class Messenger(models.Model):
         return f'{self.title} ({self.api_type})'
 
     def __repr__(self):
-        _hash = self.token_hash()
+        _hash = self.token_hash
         return f'<bot_engine.Messenger object ({self.api_type}:{_hash})>'
 
     def get_url_activating_webhook(self):
@@ -100,6 +103,7 @@ class Messenger(models.Model):
     def get_url_deactivating_webhook(self):
         return reverse('bot_engine:deactivate', kwargs={'id': self.id})
 
+    @property
     def token_hash(self) -> str:
         if not self.hash:
             self.hash = md5(self.token.encode()).hexdigest()
@@ -117,23 +121,16 @@ class Messenger(models.Model):
         log.debug(f'Dispatch; Incoming message={message};')
 
         if message.user_id:
-            account, created = (Account.objects.select_related('menu', 'user')
-                                .get_or_create(id=message.user_id,
-                                               defaults={'messenger': self,
-                                                         'menu': self.menu, }))
-            # TODO rework
+            default = {
+                'username': message.username or message.user_id,
+                'messenger': self,
+                'menu': self.menu,
+                'is_active': True,
+            }
+            account, created = Account.objects.get_or_create(id=message.user_id,
+                                                             defaults=default)
             if created or not account.info:
-                try:
-                    user_info = self.api.get_user_info(message.user_id,
-                                                       chat_id=message.user_id)
-                    account.update(username=user_info.get('username'),
-                                   info=user_info.get('info'),
-                                   is_active=True)
-                except RequestsLimitExceeded as err:
-                    # account.update(username=sender,
-                    #                info=requestLimit,
-                    #                is_active=True)
-                    log.exception(err)
+                account.update_info()
         else:
             account = None
 
@@ -175,9 +172,8 @@ class Messenger(models.Model):
         return self._handler
 
     def enable_webhook(self):
-        domain = Site.objects.get_current().domain
-        url = reverse('bot_engine:webhook', kwargs={'hash': self.token_hash()})
-        return self.api.enable_webhook(url=f'https://{domain}{url}')
+        url = reverse('bot_engine:webhook', kwargs={'hash': self.token_hash})
+        return self.api.enable_webhook(url=f'https://{DOMAIN}{url}')
 
     def disable_webhook(self):
         return self.api.disable_webhook()
@@ -185,25 +181,24 @@ class Messenger(models.Model):
     @property
     def api(self) -> BaseMessenger:
         if not hasattr(self, '_api'):
-            domain = Site.objects.get_current().domain
             url = self.logo
             self._api = self._api_class(
                 self.token, proxy=self.proxy, name=self.title,
-                avatar=f'https://{domain}{url}'
+                avatar=f'https://{DOMAIN}{url}'
             )
         return self._api
 
     @property
     def _api_class(self) -> Type[BaseMessenger]:
         """
-        Returns the connector class of saved type.
+        Returns the connector class of selected type.
         """
         return MessengerType(self.api_type).messenger_class
 
 
 class AccountManager(models.Manager):
     def get_queryset(self):
-        return super().get_queryset().select_related('user', 'messenger')
+        return super().get_queryset().select_related('user', 'messenger', 'menu')
 
 
 class Account(models.Model):
@@ -222,6 +217,9 @@ class Account(models.Model):
     context = JSONField(
         _('context'),
         default=dict, blank=True)
+    phone = models.CharField(
+        _('phone'), max_length=20,
+        null=True, blank=True)
 
     messenger = models.ForeignKey(
         'Messenger', models.SET_NULL,
@@ -289,6 +287,17 @@ class Account(models.Model):
         except MessengerException as err:
             log.exception(err)
 
+    def update_info(self):
+        try:
+            user_info = self.api.get_user_info(self.id, chat_id=self.id)
+            self.update(username=user_info.get('username'),
+                        info=user_info.get('info'))
+        except RequestsLimitExceeded as err:
+            self.info['error'] = str(err)
+            # self.update(username=message.sender.username,
+            #                info=requestLimit)
+            log.exception(err)
+
 
 class Menu(models.Model):
     title = models.CharField(
@@ -330,6 +339,7 @@ class Menu(models.Model):
         return f'<bot_engine.Menu object ({self.id})>'
 
     # def json_buttons(self) -> List[dict]:
+    #     # TODO
     #     return [item.to_dict() for item in self.buttons.all()]
 
     def process_message(self, message: Message, account: Account):
@@ -339,6 +349,8 @@ class Menu(models.Model):
         :param account: message sender object
         :return: None
         """
+        # TODO check process
+        # TODO make permissions filter
         if message.is_button:
             buttons = self.buttons.filter(Q(command=message.text) |
                                           Q(text=message.text)).all()
@@ -347,7 +359,7 @@ class Menu(models.Model):
                                                 Q(text=message.text)).all()
 
             if buttons:
-                buttons[0].process_button(message, account)
+                return buttons[0].process_button(message, account)
 
             if not buttons or len(buttons) > 1:
                 log.warning('The number of buttons found is different from one.'
@@ -431,6 +443,7 @@ class Button(models.Model):
         :param account: message sender object
         :return: None
         """
+        # TODO check process
         if self.message:
             account.send_message(Message.text(self.message))
 
@@ -456,7 +469,7 @@ class Button(models.Model):
     def save(self, *args, **kwargs):
         if not self.command:
             rnd = uuid4().hex[::3]
-            self.command = slugify(f'btn-{self.title}-{rnd}')
+            self.command = f'btn-{slugify(self.title)}-{rnd}'
         super().save(*args, **kwargs)
 
     @property

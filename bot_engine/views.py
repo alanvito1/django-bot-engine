@@ -44,7 +44,6 @@ class MessengerWebhook(APIView):
     def post(request: Request, **kwargs) -> Response:
         log.debug(f'Bot Engine Webhook; Message={request.data};')
         im_hash = kwargs.get('hash', '')
-        answer = None
 
         try:
             messenger = Messenger.objects.get(hash=im_hash)
@@ -54,6 +53,7 @@ class MessengerWebhook(APIView):
             raise NotFound('Webhook not found.')
         except Exception as err:
             log.exception(f'Bot Engine Webhook; Error={err};')
+            raise
 
         log.debug(f'Bot Engine Webhook; Answer={answer};')
         return Response(answer)

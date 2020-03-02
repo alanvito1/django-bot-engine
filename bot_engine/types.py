@@ -58,7 +58,7 @@ class Message:
         # self.error = kwargs.get('error')
 
     def __str__(self) -> str:
-        return f'Message(type={self.type}, id={self.id}, ' \
+        return f'Message({self.type}, id={self.id}, ' \
                f'im_type={self.im_type}, user={self.user_id})'
 
     def __repr__(self) -> str:
@@ -121,11 +121,11 @@ class Message:
         return cls(MessageType.UNDEFINED, text=text)
 
     @classmethod
-    def text(cls, message_id: str,
-             user_id: str,
-             im_type: str,
-             timestamp: int,
-             text: str,
+    def text(cls, text: str,
+             message_id: str = None,
+             user_id: str = None,
+             timestamp: int = None,
+             im_type: str = None,
              reply_id: str = None):
         return cls(MessageType.TEXT, message_id=message_id, user_id=user_id,
                    im_type=im_type, timestamp=timestamp, text=text)
