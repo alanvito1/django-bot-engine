@@ -1,4 +1,7 @@
 from __future__ import annotations
+from typing import List, Union
+
+from django.db.models import Model
 
 
 class MessageType:
@@ -82,99 +85,131 @@ class Message:
         return self.type in [MessageType.BUTTON]
 
     def __add__(self, other) -> Message:
-        return Message.multiple()
+        return Message.multiple(self, other)
 
     ##############################################
     # Class methods returning a new typed object #
     ##############################################
 
     @classmethod
-    def start(cls, context: str = None):
-        return cls(MessageType.START, context=context)
+    def start(cls, user_id: str, message_id: str = None,
+              timestamp: int = None, user_name: str = None,
+              context: str = None, **kwargs):
+        return cls(MessageType.START,
+                   user_id=user_id, message_id=message_id,
+                   timestamp=timestamp, user_name=user_name,
+                   context=context, **kwargs)
 
     @classmethod
-    def subscribed(cls, context: str = None):
-        return cls(MessageType.SUBSCRIBED, context=context)
+    def subscribed(cls, user_id: str, message_id: str = None,
+                   timestamp: int = None, user_name: str = None,
+                   context: str = None, **kwargs):
+        return cls(MessageType.SUBSCRIBED,
+                   user_id=user_id, message_id=message_id,
+                   timestamp=timestamp, user_name=user_name,
+                   context=context, **kwargs)
 
     @classmethod
-    def unsubscribed(cls, context: str = None):
-        return cls(MessageType.UNSUBSCRIBED, context=context)
+    def unsubscribed(cls, user_id: str, message_id: str = None,
+                     timestamp: int = None, **kwargs):
+        return cls(MessageType.UNSUBSCRIBED,
+                   user_id=user_id, message_id=message_id,
+                   timestamp=timestamp, **kwargs)
 
     @classmethod
-    def delivered(cls, message_id: str):
-        return cls(MessageType.DELIVERED, message_id=message_id)
+    def delivered(cls, user_id: str, message_id: str,
+                  timestamp: int = None, **kwargs):
+        return cls(MessageType.DELIVERED,
+                   user_id=user_id, message_id=message_id,
+                   timestamp=timestamp, **kwargs)
 
     @classmethod
-    def seen(cls, message_id: str):
-        return cls(MessageType.SEEN, message_id=message_id)
+    def seen(cls, user_id: str, message_id: str,
+             timestamp: int = None, **kwargs):
+        return cls(MessageType.SEEN,
+                   user_id=user_id, message_id=message_id,
+                   timestamp=timestamp, **kwargs)
 
     @classmethod
-    def webhook(cls):
-        return cls(MessageType.WEBHOOK)
+    def webhook(cls, timestamp: int = None, **kwargs):
+        return cls(MessageType.WEBHOOK, timestamp=timestamp, **kwargs)
 
     @classmethod
-    def failed(cls, text: str = None):
-        return cls(MessageType.FAILED, text=text)
+    def failed(cls, user_id: str, message_id: str,
+               timestamp: int = None, text: str = None, **kwargs):
+        return cls(MessageType.FAILED,
+                   user_id=user_id, message_id=message_id,
+                   timestamp=timestamp, text=text, **kwargs)
 
     @classmethod
-    def undefined(cls, text: str = None):
-        return cls(MessageType.UNDEFINED, text=text)
+    def undefined(cls, user_id: str = None, message_id: str = None,
+                  timestamp: int = None, text: str = None, **kwargs):
+        return cls(MessageType.UNDEFINED,
+                   user_id=user_id, message_id=message_id,
+                   timestamp=timestamp, text=text, **kwargs)
 
     @classmethod
-    def text(cls, text: str,
-             message_id: str = None,
-             user_id: str = None,
-             timestamp: int = None,
-             im_type: str = None,
-             reply_id: str = None):
-        return cls(MessageType.TEXT, message_id=message_id, user_id=user_id,
-                   im_type=im_type, timestamp=timestamp, text=text)
+    def text(cls, text: str, **kwargs):
+        return cls(MessageType.TEXT, text=text, **kwargs)
 
     @classmethod
-    def sticker(cls):
-        return cls(MessageType.STICKER)
+    def sticker(cls, sticker_id: int, **kwargs):
+        return cls(MessageType.STICKER, sticker_id=sticker_id, **kwargs)
 
     @classmethod
-    def picture(cls):
-        return cls(MessageType.PICTURE)
+    def picture(cls, **kwargs):
+        return cls(MessageType.PICTURE, **kwargs)
 
     @classmethod
-    def audio(cls):
-        return cls(MessageType.AUDIO)
+    def audio(cls, **kwargs):
+        return cls(MessageType.AUDIO, **kwargs)
 
     @classmethod
-    def video(cls):
-        return cls(MessageType.VIDEO)
+    def video(cls, **kwargs):
+        return cls(MessageType.VIDEO, **kwargs)
 
     @classmethod
-    def file(cls):
-        return cls(MessageType.FILE)
+    def file(cls, **kwargs):
+        return cls(MessageType.FILE, **kwargs)
 
     @classmethod
-    def contact(cls):
-        return cls(MessageType.CONTACT)
+    def contact(cls, **kwargs):
+        return cls(MessageType.CONTACT, **kwargs)
 
     @classmethod
-    def url(cls):
-        return cls(MessageType.URL)
+    def url(cls, **kwargs):
+        return cls(MessageType.URL, **kwargs)
 
     @classmethod
-    def location(cls):
-        return cls(MessageType.LOCATION)
+    def location(cls, **kwargs):
+        return cls(MessageType.LOCATION, **kwargs)
 
     @classmethod
-    def richmedia(cls):
-        return cls(MessageType.RICHMEDIA)
+    def richmedia(cls, **kwargs):
+        return cls(MessageType.RICHMEDIA, **kwargs)
 
     @classmethod
-    def button(cls):
-        return cls(MessageType.BUTTON)
+    def button(cls, **kwargs):
+        return cls(MessageType.BUTTON, **kwargs)
 
     @classmethod
-    def keyboard(cls, buttons: list):
-        return cls(MessageType.KEYBOARD, buttons=buttons)
+    def keyboard(cls, buttons: List[Union[Message, Model]], **kwargs):
+        return cls(MessageType.KEYBOARD, buttons=buttons, **kwargs)
 
     @classmethod
-    def multiple(cls, *messages):
-        # TODO Check messages
-        return cls(MessageType.MULTIPLE, messages=messages)
+    def multiple(cls, *messages: Message, **kwargs):
+        assert len(messages) > 1, 'You must place more than one message'
+        for msg in messages:
+            assert (isinstance(msg, Message),
+                    'All elements must be bot_engine.Message type')
+
+        im_type = messages[0].im_type
+
+        return cls(MessageType.MULTIPLE, messages=messages,
+                   im_type=im_type, **kwargs)
+
+    def as_list(self) -> List[Message]:
+        assert self.type == MessageType.MULTIPLE, ''
+
+
+# TODO make simple Button class

@@ -122,7 +122,7 @@ class Messenger(models.Model):
 
         if message.user_id:
             default = {
-                'username': message.username or message.user_id,
+                'username': message.user_name or message.user_id,
                 'messenger': self,
                 'menu': self.menu,
                 'is_active': True,
