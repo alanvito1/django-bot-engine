@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, Iterable, List, Union
+from typing import Any, Dict, List, Union
 
 from django.contrib.sites.models import Site
 from django.db.models import Model
@@ -25,6 +25,7 @@ class Viber(BaseMessenger):
     """
     IM connector for Viber REST API
     """
+
     #############
     # Interface #
     #############
@@ -83,6 +84,7 @@ class Viber(BaseMessenger):
         return {
             'id': data.get('id'),
             'username': data.get('name'),
+            'uri': data.get('uri'),  # check this
             'info': data
         }
 
@@ -105,19 +107,13 @@ class Viber(BaseMessenger):
         except Exception as err:
             if 'failed with status: 12' in str(err):
                 raise RequestsLimitExceeded(err)
+            raise MessengerException(err)
 
         return {
             'id': data.get('id'),
             'username': data.get('name'),
-            'info': {
-                'avatar': data.get('avatar'),
-                'country': data.get('country'),
-                'language': data.get('language'),
-                'primary_device_os': data.get('primary_device_os'),
-                'api_version': data.get('api_version'),
-                'viber_version': data.get('viber_version'),
-                'device_type': data.get('device_type'),
-            }
+            'avatar': data.get('avatar'),
+            'info': data,
         }
 
     def parse_message(self, request: Request) -> Message:
@@ -137,7 +133,7 @@ class Viber(BaseMessenger):
                      messages: Union[Message, List[Message]]) -> List[str]:
         vb_messages = []
 
-        if not isinstance(messages, Iterable):
+        if not isinstance(messages, list):
             messages = [messages]
 
         for message in messages:
@@ -182,64 +178,64 @@ class Viber(BaseMessenger):
                     message_type=msg_type,
                     message_id=vb_request.message_token,
                     user_id=vb_request.sender.id,
-                    text=vb_message.text,
-                    timestamp=vb_request.timestamp)
+                    timestamp=vb_request.timestamp,
+                    text=vb_message.text)
             elif isinstance(vb_message, v_messages.PictureMessage):
                 return Message.picture(
                     message_id=vb_request.message_token,
                     user_id=vb_request.sender.id,
-                    image_url=vb_message.media,
-                    timestamp=vb_request.timestamp)
+                    timestamp=vb_request.timestamp,
+                    file_url=vb_message.media)
             elif isinstance(vb_message, v_messages.VideoMessage):
                 return Message.video(
                     message_id=vb_request.message_token,
                     user_id=vb_request.sender.id,
-                    video_url=vb_message.media,
-                    size=vb_message.size,
-                    timestamp=vb_request.timestamp)
+                    timestamp=vb_request.timestamp,
+                    file_url=vb_message.media,
+                    file_size=vb_message.size)
             elif isinstance(vb_message, v_messages.FileMessage):
                 return Message.file(
                     message_id=vb_request.message_token,
                     user_id=vb_request.sender.id,
+                    timestamp=vb_request.timestamp,
                     file_url=vb_message.media,
-                    size=vb_message.size,
-                    timestamp=vb_request.timestamp)
+                    file_size=vb_message.size)
             elif isinstance(vb_message, v_messages.RichMediaMessage):
                 return Message.richmedia(
                     message_id=vb_request.message_token,
                     user_id=vb_request.sender.id,
+                    timestamp=vb_request.timestamp,
                     text=vb_message.rich_media,
-                    alt_text=vb_message.alt_text,
-                    timestamp=vb_request.timestamp)
+                    alt_text=vb_message.alt_text)
             elif isinstance(vb_message, v_messages.URLMessage):
                 return Message.url(
                     message_id=vb_request.message_token,
                     user_id=vb_request.sender.id,
-                    url=vb_message.media,
-                    timestamp=vb_request.timestamp)
+                    timestamp=vb_request.timestamp,
+                    url=vb_message.media)
             elif isinstance(vb_message, v_messages.LocationMessage):
                 return Message.location(
                     message_id=vb_request.message_token,
                     user_id=vb_request.sender.id,
-                    location=vb_message.location,
-                    timestamp=vb_request.timestamp)
+                    timestamp=vb_request.timestamp,
+                    location=vb_message.location)
             elif isinstance(vb_message, v_messages.ContactMessage):
                 return Message.contact(
                     message_id=vb_request.message_token,
                     user_id=vb_request.sender.id,
-                    contact=vb_message.contact,
-                    timestamp=vb_request.timestamp)
+                    timestamp=vb_request.timestamp,
+                    contact=vb_message.contact)
             elif isinstance(vb_message, v_messages.StickerMessage):
                 return Message.sticker(
                     message_id=vb_request.message_token,
                     user_id=vb_request.sender.id,
-                    sticker_id=vb_message.sticker_id,
-                    timestamp=vb_request.timestamp)
+                    timestamp=vb_request.timestamp,
+                    sticker_id=vb_message.sticker_id)
             return Message.undefined(
                 message_id=vb_request.message_token,
                 user_id=vb_request.sender.id,
-                text=str(vb_message),
-                timestamp=vb_request.timestamp)
+                timestamp=vb_request.timestamp,
+                text=str(vb_message))
         elif isinstance(vb_request, v_requests.ViberConversationStartedRequest):
             return Message.start(
                 user_id=vb_request.user.id,
@@ -310,13 +306,15 @@ class Viber(BaseMessenger):
         elif message.type == MessageType.RICHMEDIA:
             rich_media = message.rich_media
             return v_messages.RichMediaMessage(rich_media=rich_media,
-                                               alt_text=message.text)
+                                               alt_text=(message.text or
+                                                         message.alt_text))
         elif message.type == MessageType.KEYBOARD:
             kb = self._get_keyboard(message.buttons)
             return v_messages.KeyboardMessage(keyboard=kb)
 
     @staticmethod
     def _get_keyboard(buttons: List[Union[Model, dict]]) -> dict:
+        # TODO do refactoring
         vb_buttons = []
 
         for button in buttons:

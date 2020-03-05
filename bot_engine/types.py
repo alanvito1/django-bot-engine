@@ -49,9 +49,23 @@ class Message:
                  **kwargs):
         self.type = message_type
         self.id = message_id
-        self.im_type = im_type
         self.user_id = user_id
         self.timestamp = timestamp
+        self.im_type = im_type
+
+        self.user_name = None
+        self.context = None
+        self.text = None
+        self.alt_text = None
+        self.sticker_id = None
+        self.rich_media = None
+        self.file_url = None
+        self.file_size = None
+        self.file_name = None
+        self.url = None
+        self.location = None
+        self.contact = None
+        self.buttons = None
 
         for key, value in kwargs.items():
             setattr(self, key, value)

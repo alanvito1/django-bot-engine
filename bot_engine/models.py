@@ -146,18 +146,38 @@ class Messenger(models.Model):
             # self.process_service_message(message, account)
             return None
 
-        message = self.api.preprocess_message(message, account)
+        message = self.preprocess_message(message, account)
 
         if account.menu:
             account.menu.process_message(message, account)
         else:
             self.process_message(message, account)
 
+    def preprocess_message(self, message: Message, account: Account) -> Message:
+        """
+        Pre-process message data
+        Some messengers can understand the message only in context,
+        e.g. Telegram(from text to button)
+        :param message: bot_engine.Message object
+        :param account: bot_engine.Account object
+        :return: Message object
+        """
+        if self.api_type in [MessengerType.VIBER]:
+            return message
+
+        if (self.api_type in [MessengerType.TELEGRAM] and
+                message.type == MessageType.TEXT and account.menu):
+            for button in account.menu.buttons.all():
+                if message.text == button.text:
+                    message.type = MessageType.BUTTON
+
+        return message
+
     def process_message(self, message: Message, account: Account):
         """
         Process the message with a bound handler.
-        :param message: new incoming massage object
-        :param account: message sender object
+        :param message: bot_engine.Massage object
+        :param account: bot_engine.Account object
         :return: None
         """
         if self.handler:

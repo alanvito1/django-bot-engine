@@ -1,6 +1,5 @@
 from typing import Any, Dict, List, Optional, Union
 
-from django.db.models import Model
 from rest_framework.request import Request
 
 from ..types import Message
@@ -56,23 +55,12 @@ class BaseMessenger:
         """
         raise NotImplementedError('`_parse_message()` must be implemented.')
 
-    def preprocess_message(self, message: Message, account: Model) -> Message:
-        """
-        Pre-process message data
-        Some messengers can understand the message only in context,
-        e.g. Telegram(from text to button)
-        :param message: Message object
-        :param account: Account model object
-        :return: Message object
-        """
-        return message
-
     def send_message(self, receiver: str,
-                     message: Union[Message, List[Message]]) -> List[str]:
+                     messages: Union[Message, List[Message]]) -> List[str]:
         """
         Send message method
         :param receiver: receiver user id
-        :param message: Message object or list of Message objects
+        :param messages: Message object or list of Message objects
         :return: message id list
         """
         raise NotImplementedError('`send_message()` must be implemented.')
@@ -83,7 +71,7 @@ class BaseMessenger:
         :param text: message text
         :return: api message object
         """
-        raise NotImplementedError('`welcome_message()` must be implemented.')
+        return None
 
     @staticmethod
     def _proxy(proxy_url: Optional[str]) -> Optional[Dict[str, str]]:

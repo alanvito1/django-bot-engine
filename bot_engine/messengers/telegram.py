@@ -1,13 +1,12 @@
-import json
 import logging
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, Dict, List, Union
 
 from django.conf import settings
 from django.contrib.sites.models import Site
 from django.db.models import Model
 from rest_framework.request import Request
 # TODO: Independently implement or find a project with a more permissive license
-from telebot import TeleBot, apihelper, types
+from telebot import apihelper, types
 
 from .base_messenger import BaseMessenger
 from ..errors import MessengerException
@@ -21,6 +20,7 @@ class Telegram(BaseMessenger):
     """
     IM connector for Telegram Bot API
     """
+
     #############
     # Interface #
     #############
@@ -28,110 +28,184 @@ class Telegram(BaseMessenger):
     def __init__(self, token: str, **kwargs):
         super().__init__(token, **kwargs)
 
-        self.bot = TeleBot(token=token)
         if self.proxy_addr:
             apihelper.proxy = self.proxy_addr
 
     def enable_webhook(self, url: str, **kwargs):
-        return self.bot.set_webhook(url=url)
+        return apihelper.set_webhook(self.token, url)
 
     def disable_webhook(self):
-        return self.bot.remove_webhook()
+        return apihelper.set_webhook(self.token)
 
     def get_account_info(self) -> Dict[str, Any]:
-        data = self.bot.get_me()
-        # {
+        # data = {
         #     'id': 0123,
         #     'first_name': 'name',
         #     'last_name': 'name',
-        #     'username': 'name'
+        #     'username': 'name',
+        #     'is_bot': True,
+        #     'language_code': None
         # }
-        account_info = {
+        try:
+            data = apihelper.get_me(self.token)
+        except Exception as err:
+            raise MessengerException(err)
+
+        return {
             'id': data.get('id'),
             'username': data.get('username'),
+            'uri': f'http://t.me/{data.get("username")}',
             'info': data
         }
-        return account_info
 
     def get_user_info(self, user_id: str, **kwargs) -> Dict[str, Any]:
-        photo_url = None
-        data = self.bot.get_chat_member(kwargs.get('chat_id'), user_id)
-        # {
-        #     'id': 0123,
-        #     'first_name': 'name',
-        #     'last_name': 'name',
-        #     'username': 'name'
+        # data = {
+        #     'user': {
+        #         'id': id,
+        #         'is_bot': is_bot,
+        #         'first_name': first_name,
+        #         'username': username,
+        #         'last_name': last_name,
+        #         'language_code': language_code,
+        #     },
+        #     'status': 'status',
+        #     'until_date': None,
+        #     'can_be_edited': None,
+        #     'can_change_info': None,
+        #     'can_post_messages': None,
+        #     'can_edit_messages': None,
+        #     'can_delete_messages': None,
+        #     'can_invite_users': None,
+        #     'can_restrict_members': None,
+        #     'can_pin_messages': None
+        #     'can_promote_members': None,
+        #     'can_send_messages': None,
+        #     'can_send_media_messages': None,
+        #     'can_send_other_messages': None,
+        #     'can_add_web_page_previews': None,
         # }
-        log.debug(f'User info data={data}')
-        photos = self.bot.get_user_profile_photos(user_id)
-        # {
+        try:
+            photo_url = None
+            data = apihelper.get_chat_member(self.token,
+                                             kwargs.get('chat_id') or user_id,
+                                             user_id)
+            log.debug(f'User info data={data};')
+        except Exception as err:
+            raise MessengerException(err)
+
+        # photos = {
         #     'total_count': 123,
         #     'photos': [{
         #         'id': 'uid',
         #         'width': 10,
         #         'height': 10,
         #         'file_size': 123,
-        #     }]
+        #     }, ]
         # }
-        log.debug(f'User photo data={photos}')
-        if photos.total_count > 0:
-            log.debug(f'One photo={photos.photos[0][0]}')
-            photo_url = self.save_file(photos.photos[0][0].file_id)
-
-        user_info = {
-            'id': data.user.id,
-            'username': data.user.username,
-            'info': {
-                'avatar': photo_url,
-                'first_name': data.user.first_name,
-                'last_name': data.user.last_name,
-            }
-        }
-        return user_info
-
-    def parse_message(self, request: Request) -> Message:
         try:
-            update = request.data
-            message = Message(
-                message_type=MessageType.TEXT,
-                message_id=update.get('message', {}).get('message_id', ''),
-                user_id=update.get('message', {}).get('from', {}).get('id', ''),
-                text=update.get('message').get('text', ''),
-                timestamp=update.get('message').get('date', ''), )
-            return message
+            photos = apihelper.get_user_profile_photos(self.token, user_id)
+            data.update(photos=photos)
+
+            log.debug(f'User photos={photos};')
+
+            if photos['total_count'] > 0:
+                # 'https://api.telegram.org/file/bot{0}/{1}'.format(API_TOKEN, file_info.file_path)
+                photo_url = ''  # self.save_file(photos['photos'][0][0].file_id)
+                # TODO make simple photo url
+            data.update(avatar=photo_url)
         except Exception as err:
             raise MessengerException(err)
 
-    def preprocess_message(self, message: Message, account: Model) -> Message:
-        if message.type == MessageType.TEXT and account.menu:
-            for button in account.menu.buttons.all():
-                if message.text == button.text:
-                    message.type = MessageType.BUTTON
-        return message
+        return {
+            'id': data['user']['id'],
+            'username': data['user']['username'],
+            'avatar': photo_url,
+            'info': data
+        }
+
+    def parse_message(self, request: Request) -> Message:
+        r_data = request.data
+
+        return self._from_tg_message(r_data)
 
     def send_message(self, receiver: str,
-                     message: Union[Message, List[Message]]) -> List[str]:
-        kb = types.ReplyKeyboardMarkup(row_width=3)
-        for btn in button_list or []:
-            kb.add(types.KeyboardButton(btn.text))
-        return self.bot.send_message(chat_id=receiver, text=message,
-                                     reply_markup=kb)
+                     messages: Union[Message, List[Message]]) -> List[str]:
+        message_ids = []
 
-    def welcome_message(self, text: str) -> Union[str, Dict[str, Any], None]:
-        return None
+        if not isinstance(messages, list):
+            messages = [messages]
+
+        for message in messages:
+            try:
+                message_id = self._send_message(receiver, message)
+                message_ids.append(message_id)
+            except Exception as err:
+                raise err
+
+        return message_ids
 
     ################
     # Help methods #
     ################
 
-    def save_file(self, file_id: str) -> str:
-        file_name = f'{file_id}.png'
-        domain = Site.objects.get_current().domain
-        file_url = f'https://{domain}{settings.MEDIA_URL}tg/{file_name}'
-        file = self.bot.get_file(file_id)
-        with open(f'{settings.MEDIA_ROOT}tg/{file_name}', 'wb') as fd:
-            fd.write(file)
-        return file_url
+    def _from_tg_message(self, update: dict) -> Message:
+        tg_message = update.get('message')
+
+        message = Message.text(
+            message_id=tg_message.get('message_id', ''),
+            user_id=tg_message.get('from', {}).get('id', ''),
+            text=tg_message.get('text', ''),
+            timestamp=tg_message.get('date', '')
+        )
+
+        return message
+
+    # def _to_tg_message(self, message: Message) -> dict:
+    #
+    #     kb = types.ReplyKeyboardMarkup(row_width=3)
+    #     for btn in button_list or []:
+    #         kb.add(types.KeyboardButton(btn.text))
+    #
+    #     return {}
+
+    def _send_message(self, receiver: str, message: Message) -> str:
+        # tg_message = self._to_tg_message(message)
+
+        if message.type == MessageType.TEXT:
+            msg_id = apihelper.send_message(self.token, receiver, message.text)
+        elif message.type == MessageType.STICKER:
+            msg_id = apihelper.send_message(self.token, receiver, message.text)
+        elif message.type == MessageType.PICTURE:
+            msg_id = apihelper.send_photo(self.token, receiver, message.text)
+        elif message.type == MessageType.AUDIO:
+            msg_id = apihelper.send_audio(self.token, receiver, message.text)
+        elif message.type == MessageType.VIDEO:
+            msg_id = apihelper.send_video(self.token, receiver, message.text)
+        elif message.type == MessageType.FILE:
+            msg_id = apihelper.send_data(self.token, receiver, message.text)
+        elif message.type == MessageType.CONTACT:
+            msg_id = apihelper.send_contact(self.token, receiver, message.text)
+        elif message.type == MessageType.URL:
+            msg_id = apihelper.send_message(self.token, receiver, message.text)
+        elif message.type == MessageType.LOCATION:
+            msg_id = apihelper.send_location(self.token, receiver, message.text)
+        elif message.type == MessageType.RICHMEDIA:
+            msg_id = apihelper.send_message(self.token, receiver, message.text)
+        elif message.type == MessageType.KEYBOARD:
+            msg_id = apihelper.send_message(self.token, receiver, message.text)
+        else:
+            msg_id = apihelper.send_message(self.token, receiver, message.text)
+
+        return f'{receiver}_{msg_id}'
+
+    # def save_file(self, file_id: str) -> str:
+    #     file_name = f'{file_id}.png'
+    #     domain = Site.objects.get_current().domain
+    #     file_url = f'https://{domain}{settings.MEDIA_URL}tg/{file_name}'
+    #     file = self.bot.get_file(file_id)
+    #     with open(f'{settings.MEDIA_ROOT}tg/{file_name}', 'wb') as fd:
+    #         fd.write(file)
+    #     return file_url
 
     # getMe
     # sendMessage
