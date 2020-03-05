@@ -149,13 +149,35 @@ class Telegram(BaseMessenger):
     ################
 
     def _from_tg_message(self, update: dict) -> Message:
+        # update = {
+        #     'update_id': 268489,
+        #     'message': {
+        #         'message_id': 6,
+        #         'from': User or None,
+        #         'date': 1995468233,
+        #         'edit_date': 1995468233,
+        #         'chat': Chat,
+        #         'from': User,
+        #         '': ,
+        #     },
+        #     'edited_message': Message,
+        #     'channel_post': Message,
+        #     'edited_channel_post': Message,
+        #     'inline_query': {'from': User, 'location': Location or None, 'query': 'query', 'offset': 'offset', },
+        #     'chosen_inline_result': {'result_id': 2, 'from': User, 'query': 'query', 'location': Location or None, 'inline_message_id': 465, },
+        #     'callback_query': {'id': 984, 'from': User, 'message': Message or None, 'inline_message_id': 465, 'chat_instance': 'chat', 'data': 'data', 'game_short_name': 'game', },
+        #     'shipping_query': {'id': 64, 'from': User, 'invoice_payload': 'invoice_payload', 'shipping_address': ShippingAddress, },
+        #     'pre_checkout_query': {'id': 65, 'from': User, 'currency': 'ISO 4217', 'total_amount': 465, 'invoice_payload': 'invoice_payload', 'shipping_option_id': '242', 'order_info': OrderInfo or None, },
+        #     'poll': {'id': 'id', 'question': 'question', 'options': [PollOption], 'total_voter_count': 8, 'is_closed': True, 'is_anonymous': True, 'type': 'type', 'allows_multiple_answers': True, 'correct_option_id': 5, },
+        #     'poll_answer': {'poll_id': 'poll_id', 'user': User, 'option_ids': [int]}
+        # }
         tg_message = update.get('message')
 
         message = Message.text(
-            message_id=tg_message.get('message_id', ''),
-            user_id=tg_message.get('from', {}).get('id', ''),
+            message_id=tg_message.get('message_id'),
+            user_id=tg_message.get('from', {}).get('id'),
             text=tg_message.get('text', ''),
-            timestamp=tg_message.get('date', '')
+            timestamp=tg_message.get('date')
         )
 
         return message
