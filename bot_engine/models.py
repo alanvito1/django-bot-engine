@@ -52,8 +52,8 @@ class Messenger(models.Model):
         _('logo'), max_length=256,
         default='', blank=True,
         help_text=_('Relative URL. Required for some messenger APIs: Viber.'))
-    welcome_text = models.CharField(
-        _('welcome text'), max_length=512,
+    welcome_text = models.TextField(
+        _('welcome text'),
         default='', blank=True,
         help_text=_('Welcome message. Will be sent in response to the opening'
                     ' of the dialog (not a subscribe event). May be used with'
@@ -140,6 +140,7 @@ class Messenger(models.Model):
             # TODO make service handler
             if (message.type == MessageType.START and account
                     and self.welcome_text):
+                account.send_message(Message.text(text=self.welcome_text))
                 return self.api.welcome_message(self.welcome_text)
             elif message.type == MessageType.UNSUBSCRIBED and account:
                 account.update(is_active=False)
@@ -272,7 +273,7 @@ class Account(models.Model):
         unique_together = ('id', 'messenger')
 
     def __str__(self):
-        return f'{self.username or self.id} ({self.messenger})'
+        return self.username or self.id
 
     def __repr__(self):
         return f'<bot_engine.Account object ({self.id})>'
@@ -287,20 +288,21 @@ class Account(models.Model):
     def avatar(self) -> str:
         return self.info.get('avatar') or ''
 
-    def send_message(self, message: Message, buttons: List[Button] = None,
-                     i_buttons: List[Button] = None):
+    def send_message(self, message: Message):
+        buttons = None
+        i_buttons = None
         if self.menu:
-            buttons = buttons or self.menu.buttons.filter(is_inline=False).all()
-            i_buttons = (i_buttons or
-                         self.menu.buttons.filter(is_inline=True).all())
+            buttons = list(self.menu.buttons.filter(is_inline=False).all())
+            i_buttons = list(self.menu.buttons.filter(is_inline=True).all())
 
-        btn_list = buttons or None
-        ibtn_list = i_buttons or None
+        if buttons:
+            message += Message.keyboard(buttons, message.user_id)
+        if i_buttons:
+            message += Message.keyboard(i_buttons, message.user_id)
 
         # TODO: make Massage parameter and handle him in api objects
         try:
-            self.messenger.api.send_message(self.id, message.text,
-                                            button_list=btn_list)
+            self.messenger.api.send_message(self.id, message)
         except NotSubscribed:
             self.is_active = False
             log.warning(f'Account {self.username}:{self.id} is not subscribed.')
@@ -309,7 +311,8 @@ class Account(models.Model):
 
     def update_info(self):
         try:
-            user_info = self.api.get_user_info(self.id, chat_id=self.id)
+            user_info = self.messenger.api.get_user_info(self.id,
+                                                         chat_id=self.id)
             self.update(username=user_info.get('username'),
                         info=user_info.get('info'))
         except RequestsLimitExceeded as err:

@@ -162,53 +162,82 @@ class Message:
                    user_id=user_id, message_id=message_id,
                    timestamp=timestamp, text=text, **kwargs)
 
+    # TODO recheck
     @classmethod
-    def text(cls, text: str, **kwargs):
-        return cls(MessageType.TEXT, text=text, **kwargs)
+    def text(cls, text: str,
+             user_id: str = None, message_id: str = None, **kwargs):
+        return cls(MessageType.TEXT,
+                   user_id=user_id, message_id=message_id, text=text, **kwargs)
 
     @classmethod
-    def sticker(cls, sticker_id: int, **kwargs):
-        return cls(MessageType.STICKER, sticker_id=sticker_id, **kwargs)
+    def sticker(cls, sticker_id: int,
+                user_id: str = None, message_id: str = None, **kwargs):
+        return cls(MessageType.STICKER,
+                   user_id=user_id, message_id=message_id, sticker_id=sticker_id, **kwargs)
 
     @classmethod
-    def picture(cls, **kwargs):
-        return cls(MessageType.PICTURE, **kwargs)
+    def picture(cls, file_url: str, file_size: int = None, file_name: str = None,
+                user_id: str = None, message_id: str = None, **kwargs):
+        return cls(MessageType.PICTURE,file_url=file_url,
+                   file_size=file_size, file_name=file_name,
+                   user_id=user_id, message_id=message_id, **kwargs)
 
     @classmethod
-    def audio(cls, **kwargs):
-        return cls(MessageType.AUDIO, **kwargs)
+    def audio(cls, file_url: str, file_size: int = None, file_name: str = None,
+              user_id: str = None, message_id: str = None, **kwargs):
+        return cls(MessageType.AUDIO, file_url=file_url,
+                   file_size=file_size, file_name=file_name,
+                   user_id=user_id, message_id=message_id, **kwargs)
 
     @classmethod
-    def video(cls, **kwargs):
-        return cls(MessageType.VIDEO, **kwargs)
+    def video(cls, file_url: str, file_size: int = None, file_name: str = None,
+              user_id: str = None, message_id: str = None, **kwargs):
+        return cls(MessageType.VIDEO, file_url=file_url,
+                   file_size=file_size, file_name=file_name,
+                   user_id=user_id, message_id=message_id, **kwargs)
 
     @classmethod
-    def file(cls, **kwargs):
-        return cls(MessageType.FILE, **kwargs)
+    def file(cls, file_url: str, file_size: int = None, file_name: str = None,
+             user_id: str = None, message_id: str = None, **kwargs):
+        return cls(MessageType.FILE, file_url=file_url,
+                   file_size=file_size, file_name=file_name,
+                   user_id=user_id, message_id=message_id, **kwargs)
 
     @classmethod
-    def contact(cls, **kwargs):
-        return cls(MessageType.CONTACT, **kwargs)
+    def contact(cls, contact: dict,
+                user_id: str = None, message_id: str = None, **kwargs):
+        return cls(MessageType.CONTACT, contact=contact,
+                   user_id=user_id, message_id=message_id, **kwargs)
 
     @classmethod
-    def url(cls, **kwargs):
-        return cls(MessageType.URL, **kwargs)
+    def url(cls, url: str,
+            user_id: str = None, message_id: str = None, **kwargs):
+        return cls(MessageType.URL, url=url,
+                   user_id=user_id, message_id=message_id, **kwargs)
 
     @classmethod
-    def location(cls, **kwargs):
-        return cls(MessageType.LOCATION, **kwargs)
+    def location(cls, location: dict,
+                 user_id: str = None, message_id: str = None, **kwargs):
+        return cls(MessageType.LOCATION, location=location,
+                   user_id=user_id, message_id=message_id, **kwargs)
 
     @classmethod
-    def richmedia(cls, **kwargs):
-        return cls(MessageType.RICHMEDIA, **kwargs)
+    def richmedia(cls, rich_media: Union[str, dict],
+                  user_id: str = None, message_id: str = None, **kwargs):
+        return cls(MessageType.RICHMEDIA, rich_media=rich_media,
+                   user_id=user_id, message_id=message_id, **kwargs)
 
     @classmethod
-    def button(cls, **kwargs):
-        return cls(MessageType.BUTTON, **kwargs)
+    def button(cls, text: str, command: str = None,
+               user_id: str = None, message_id: str = None, **kwargs):
+        return cls(MessageType.BUTTON, text=text, command=command,
+                   user_id=user_id, message_id=message_id, **kwargs)
 
     @classmethod
-    def keyboard(cls, buttons: List[Union[Message, Model]], **kwargs):
-        return cls(MessageType.KEYBOARD, buttons=buttons, **kwargs)
+    def keyboard(cls, buttons: List[Union[Message, Model]],
+                 user_id: str = None, message_id: str = None, **kwargs):
+        return cls(MessageType.KEYBOARD,
+                   user_id=user_id, message_id=message_id, buttons=buttons, **kwargs)
 
     @classmethod
     def multiple(cls, *messages: Message, **kwargs):
@@ -224,6 +253,8 @@ class Message:
 
     def as_list(self) -> List[Message]:
         assert self.type == MessageType.MULTIPLE, ''
+
+        return self.messages
 
 
 # TODO make simple Button class

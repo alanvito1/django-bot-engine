@@ -131,7 +131,7 @@ class AccountAdmin(admin.ModelAdmin):
     actions = ('send_ping', 'update_info')
     fieldsets = (
         (None, {
-            'fields': ('id', ('messenger', 'is_active'), 'username', 'user'),
+            'fields': ('id', 'messenger', 'is_active', 'username', 'user'),
             'classes': ('extrapretty', 'wide'),
         }),
         (_('Info'), {

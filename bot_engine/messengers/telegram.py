@@ -59,31 +59,6 @@ class Telegram(BaseMessenger):
         }
 
     def get_user_info(self, user_id: str, **kwargs) -> Dict[str, Any]:
-        # data = {
-        #     'user': {
-        #         'id': id,
-        #         'is_bot': is_bot,
-        #         'first_name': first_name,
-        #         'username': username,
-        #         'last_name': last_name,
-        #         'language_code': language_code,
-        #     },
-        #     'status': 'status',
-        #     'until_date': None,
-        #     'can_be_edited': None,
-        #     'can_change_info': None,
-        #     'can_post_messages': None,
-        #     'can_edit_messages': None,
-        #     'can_delete_messages': None,
-        #     'can_invite_users': None,
-        #     'can_restrict_members': None,
-        #     'can_pin_messages': None
-        #     'can_promote_members': None,
-        #     'can_send_messages': None,
-        #     'can_send_media_messages': None,
-        #     'can_send_other_messages': None,
-        #     'can_add_web_page_previews': None,
-        # }
         try:
             photo_url = None
             data = apihelper.get_chat_member(self.token,
@@ -93,15 +68,6 @@ class Telegram(BaseMessenger):
         except Exception as err:
             raise MessengerException(err)
 
-        # photos = {
-        #     'total_count': 123,
-        #     'photos': [{
-        #         'id': 'uid',
-        #         'width': 10,
-        #         'height': 10,
-        #         'file_size': 123,
-        #     }, ]
-        # }
         try:
             photos = apihelper.get_user_profile_photos(self.token, user_id)
             data.update(photos=photos)
@@ -109,10 +75,8 @@ class Telegram(BaseMessenger):
             log.debug(f'User photos={photos};')
 
             if photos['total_count'] > 0:
-                # 'https://api.telegram.org/file/bot{0}/{1}'.format(API_TOKEN, file_info.file_path)
-                photo_url = ''  # self.save_file(photos['photos'][0][0].file_id)
-                # TODO make simple photo url
-            data.update(avatar=photo_url)
+                photo_url = self.get_file_url(photos['photos'][0][0]['file_id'])
+            data.update(avatar=photo_url, photos=photos)
         except Exception as err:
             raise MessengerException(err)
 
@@ -152,13 +116,57 @@ class Telegram(BaseMessenger):
         # update = {
         #     'update_id': 268489,
         #     'message': {
-        #         'message_id': 6,
+        #         'message_id': int,
         #         'from': User or None,
         #         'date': 1995468233,
-        #         'edit_date': 1995468233,
-        #         'chat': Chat,
-        #         'from': User,
-        #         '': ,
+        #         'chat': {'id': long, 'type': str, 'title': str,
+        #             'username': str, 'first_name': str, 'last_name': str,
+        #             'photo': ChatPhoto, 'description': str, 'invite_link': str,
+        #             'pinned_message': Message, 'permissions': ChatPermissions,
+        #             'slow_mode_delay': int, 'sticker_set_name': str, 'can_set_sticker_set': True},
+        #         'forward_from': User or None,
+        #         'forward_from_chat': Chat or None,
+        #         'forward_from_message_id': Int or None,
+        #         'forward_signature': Str on None,
+        #         'forward_sender_name': Str on None,
+        #         'forward_date': Int or None,
+        #         'reply_to_message': Message or None,
+        #         'edit_date': Int or None,
+        #         'media_group_id': Str on None,
+        #         'author_signature': Str on None,
+        #         'text': Str on None,
+        #         'entities': [{'type': str, 'offset': int, 'length': int, 'url': str or None, 'user': User or None, 'language': str or None}],
+        #         'caption_entities': [MessageEntity],
+        #         'audio': {'file_id': str, 'file_unique_id': str, 'duration': int, 'performer': str, 'title': str, 'thumb': PhotoSize, 'mime_type': str, 'file_size': int},
+        #         'document': {'file_id': str, 'file_unique_id': str, 'thumb': PhotoSize, 'file_name': str, 'mime_type': str, 'file_size': int},
+        #         'animation': {'file_id': str, 'file_unique_id': str, 'width': int, 'height': int, 'duration': int, 'thumb': PhotoSize, 'file_name': str, 'mime_type': str, 'file_size': int},
+        #         'game': {'title': str, 'description': str, 'photo': [PhotoSize], 'text': str, 'text_entities': [MessageEntity], 'animation': Animation},
+        #         'photo': [PhotoSize],
+        #         'sticker': {'file_id': str, 'file_unique_id': str, 'width': int, 'height': int, 'is_animated': True, 'thumb': PhotoSize, 'emoji': str, 'set_name': str, 'mask_position': MaskPosition, 'file_size': int},
+        #         'video': {'file_id': str, 'file_unique_id': str, 'width': int, 'height': int, 'duration': int, 'thumb': PhotoSize, 'mime_type': str, 'file_size': int},
+        #         'voice': {'file_id': str, 'file_unique_id': str, 'duration': int, 'mime_type': str, 'file_size': int},
+        #         'video_note': {'file_id': str, 'file_unique_id': str, 'length': int, 'duration': int, 'thumb': PhotoSize, 'file_size': int},
+        #         'caption': str,
+        #         'contact': {'phone_number': str, 'first_name': str, 'last_name': str, 'user_id': int, 'vcard': str},
+        #         'location': {'longitude': float, 'latitude': float},
+        #         'venue': {'location': Location, 'title': str, 'address': str, 'foursquare_id': str, 'foursquare_type': str},
+        #         'poll': Poll,
+        #         'new_chat_members': [User] or None,
+        #         'left_chat_member': User or None,
+        #         'new_chat_title': 'title' or None,
+        #         'new_chat_photo': [PhotoSize] or None,
+        #         'delete_chat_photo': True or None,
+        #         'group_chat_created': True or None,
+        #         'supergroup_chat_created': True or None,  # Skip
+        #         'channel_chat_created': True or None,  # Skip
+        #         'migrate_to_chat_id': 453 or None,
+        #         'migrate_from_chat_id': 345 or None,
+        #         'pinned_message': Message or None,
+        #         'invoice': Invoice or None,
+        #         'successful_payment': SuccessfulPayment or None,
+        #         'connected_website': 'domain' or None,  # Tg Login
+        #         'passport_data': PassportData or None,
+        #         'reply_markup': InlineKeyboardMarkup or None,
         #     },
         #     'edited_message': Message,
         #     'channel_post': Message,
@@ -171,27 +179,166 @@ class Telegram(BaseMessenger):
         #     'poll': {'id': 'id', 'question': 'question', 'options': [PollOption], 'total_voter_count': 8, 'is_closed': True, 'is_anonymous': True, 'type': 'type', 'allows_multiple_answers': True, 'correct_option_id': 5, },
         #     'poll_answer': {'poll_id': 'poll_id', 'user': User, 'option_ids': [int]}
         # }
-        tg_message = update.get('message')
+        tg_message = (update.get('message') or
+                      update.get('channel_post'))
+        tg_edited_message = (update.get('edited_message') or
+                             update.get('edited_channel_post'))
+        user = tg_message.get('from')  # or chat?
+        message_id = f'{user.get("id")}_{tg_message["message_id"]}'
 
-        message = Message.text(
-            message_id=tg_message.get('message_id'),
-            user_id=tg_message.get('from', {}).get('id'),
-            text=tg_message.get('text', ''),
-            timestamp=tg_message.get('date')
-        )
+        if tg_message.get('audio'):
+            message = Message.audio(
+                message_id=message_id,
+                user_id=user.get('id'),
+                timestamp=tg_message['date'],
+                file_url=self.get_file_url(tg_message['audio']['file_id']),
+                file_size=tg_message['audio'].get('file_size'),
+                file_name=f'{tg_message["audio"]["performer"]} - {tg_message["audio"]["title"]}',
+                file_duration=tg_message['audio'].get('duration'),
+                text=tg_message.get('text'),
+                alt_text=tg_message.get('caption'),
+                im_type='telegram')
+        elif tg_message.get('document'):
+            message = Message.file(
+                message_id=message_id,
+                user_id=user.get('id'),
+                timestamp=tg_message['date'],
+                file_url=self.get_file_url(tg_message['document']['file_id']),
+                file_size=tg_message['document'].get('file_size'),
+                file_name=tg_message['document']['file_name'],
+                text=tg_message.get('text'),
+                alt_text=tg_message.get('caption'),
+                im_type='telegram')
+        elif tg_message.get('animation'):
+            message = Message.file(
+                message_id=message_id,
+                user_id=user.get('id'),
+                timestamp=tg_message['date'],
+                file_url=self.get_file_url(tg_message['animation']['file_id']),
+                file_size=tg_message['animation'].get('file_size'),
+                file_name=tg_message['animation']['file_name'],
+                text=tg_message.get('text'),
+                alt_text=tg_message.get('caption'),
+                im_type='telegram')
+        elif tg_message.get('game'):
+            message = Message.game(
+                message_id=message_id,
+                user_id=user.get('id'),
+                timestamp=tg_message['date'],
+                game=tg_message['game'],
+                text=tg_message.get('text'),
+                alt_text=tg_message.get('caption'),
+                im_type='telegram')
+        elif tg_message.get('photo'):
+            if len(tg_message['photo'][0]) > 1:
+                message = Message.multiple()
+                for photo in tg_message['photo'][0]:
+                    message += Message.picture(
+                        message_id=message_id,
+                        user_id=user.get('id'),
+                        timestamp=tg_message['date'],
+                        file_url=self.get_file_url(photo['file_id']),
+                        file_size=photo.get('file_size'),
+                        text=tg_message.get('text'),
+                        alt_text=tg_message.get('caption'),
+                        im_type='telegram')
+            else:
+                message = Message.picture(
+                    message_id=message_id,
+                    user_id=user.get('id'),
+                    timestamp=tg_message['date'],
+                    file_url=self.get_file_url(tg_message['photo'][0][0]['file_id']),
+                    file_size=tg_message['photo'][0][0].get('file_size'),
+                    text=tg_message.get('text'),
+                    alt_text=tg_message.get('caption'),
+                    im_type='telegram')
+        elif tg_message.get('sticker'):
+            message = Message.sticker(
+                message_id=message_id,
+                user_id=user.get('id'),
+                timestamp=tg_message['date'],
+                file_url=self.get_file_url(tg_message['sticker']['file_id']),
+                file_size=tg_message['sticker'].get('file_size'),
+                text=tg_message.get('text'),
+                alt_text=tg_message.get('caption'),
+                im_type='telegram')
+        elif tg_message.get('video'):
+            message = Message.video(
+                message_id=message_id,
+                user_id=user.get('id'),
+                timestamp=tg_message['date'],
+                file_url=self.get_file_url(tg_message['video']['file_id']),
+                file_size=tg_message['video'].get('file_size'),
+                file_duration=tg_message['video'].get('duration'),
+                text=tg_message.get('text'),
+                alt_text=tg_message.get('caption'),
+                im_type='telegram')
+        elif tg_message.get('voice'):
+            message = Message.audio(
+                message_id=message_id,
+                user_id=user.get('id'),
+                timestamp=tg_message['date'],
+                file_url=self.get_file_url(tg_message['voice']['file_id']),
+                file_size=tg_message['voice'].get('file_size'),
+                file_duration=tg_message['voice'].get('duration'),
+                text=tg_message.get('text'),
+                alt_text=tg_message.get('caption'),
+                im_type='telegram')
+        elif tg_message.get('video_note'):
+            message = Message.video(
+                message_id=message_id,
+                user_id=user.get('id'),
+                timestamp=tg_message['date'],
+                file_url=self.get_file_url(tg_message['video_note']['file_id']),
+                file_size=tg_message['video_note'].get('file_size'),
+                file_duration=tg_message['video_note'].get('duration'),
+                text=tg_message.get('text'),
+                alt_text=tg_message.get('caption'),
+                im_type='telegram')
+        elif tg_message.get('contact'):
+            message = Message.contact(
+                message_id=message_id,
+                user_id=user.get('id'),
+                timestamp=tg_message['date'],
+                contact=tg_message['contact'],
+                text=tg_message.get('text'),
+                alt_text=tg_message.get('caption'),
+                im_type='telegram')
+        elif tg_message.get('location'):
+            message = Message.location(
+                message_id=message_id,
+                user_id=user.get('id'),
+                timestamp=tg_message['date'],
+                location=tg_message['location'],
+                text=tg_message.get('text'),
+                alt_text=tg_message.get('caption'),
+                im_type='telegram')
+        elif tg_message.get('venue'):
+            message = Message.location(
+                message_id=message_id,
+                user_id=user.get('id'),
+                timestamp=tg_message['date'],
+                location=tg_message['venue']['location'],
+                text=tg_message['venue']['title'] or tg_message.get('text'),
+                alt_text=tg_message['venue']['address'] or tg_message.get('caption'),
+                im_type='telegram')
+        else:
+            message = Message.text(
+                message_id=message_id,
+                user_id=user.get('id'),
+                timestamp=tg_message['date'],
+                text=tg_message.get('text'),
+                alt_text=tg_message.get('caption'),
+                im_type='telegram')
+
+        if message.text == '/start':
+            message.type = MessageType.START
 
         return message
 
-    # def _to_tg_message(self, message: Message) -> dict:
-    #
-    #     kb = types.ReplyKeyboardMarkup(row_width=3)
-    #     for btn in button_list or []:
-    #         kb.add(types.KeyboardButton(btn.text))
-    #
-    #     return {}
-
     def _send_message(self, receiver: str, message: Message) -> str:
-        # tg_message = self._to_tg_message(message)
+        # TODO implement chat work. now only tet-a-tet
+        receiver = receiver.split('_')[0]
 
         if message.type == MessageType.TEXT:
             msg_id = apihelper.send_message(self.token, receiver, message.text)
@@ -214,11 +361,23 @@ class Telegram(BaseMessenger):
         elif message.type == MessageType.RICHMEDIA:
             msg_id = apihelper.send_message(self.token, receiver, message.text)
         elif message.type == MessageType.KEYBOARD:
-            msg_id = apihelper.send_message(self.token, receiver, message.text)
+            kb = types.ReplyKeyboardMarkup()
+            kb.add(*[x.text for x in message.buttons])
+            msg_id = apihelper.send_message(self.token, receiver, '', reply_markup=kb)
         else:
             msg_id = apihelper.send_message(self.token, receiver, message.text)
 
         return f'{receiver}_{msg_id}'
+
+    def get_file_url(self, file_id: str) -> str:
+        # TODO make download and save on this server
+        try:
+            file = apihelper.get_file(self.token, file_id)
+            url = f'https://api.telegram.org/file/bot{self.token}/{file["file_path"]}'
+        except Exception as err:
+            log.exception(err)
+            return ''
+        return url
 
     # def save_file(self, file_id: str) -> str:
     #     file_name = f'{file_id}.png'
