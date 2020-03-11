@@ -30,6 +30,7 @@ DEFAULTS = {
     'BUTTON_PREFIX': 'BTN_',
     'MENU_ITEM_PREFIX': 'MI_BTN_',
     'SAVE_MESSAGES': True,
+    'BOT_API_CLIENT_MODEL': '',
 
     # REST Framework examples
     # Base API policies
