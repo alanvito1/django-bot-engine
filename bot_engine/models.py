@@ -166,7 +166,7 @@ class Messenger(models.Model):
         if self.api_type in [MessengerType.VIBER]:
             return message
 
-        if (self.api_type in [MessengerType.TELEGRAM] and
+        if (self.api_type in [MessengerType.TELEGRAM.value] and
                 message.type == MessageType.TEXT and account.menu):
             for button in account.menu.buttons.all():
                 if message.text == button.text:
@@ -182,10 +182,10 @@ class Messenger(models.Model):
         :return: None
         """
         if self.handler:
-            self.run_handler(message, account)
+            self.call_handler(message, account)
 
     @property
-    def run_handler(self) -> Callable:
+    def call_handler(self) -> Callable:
         # importing handler or hot reloading
         if not hasattr(self, '_handler') or self.handler != self._old_handler:
             self._handler = import_string(self.handler)
@@ -288,17 +288,17 @@ class Account(models.Model):
     def avatar(self) -> str:
         return self.info.get('avatar') or ''
 
-    def send_message(self, message: Message):
-        buttons = None
-        i_buttons = None
-        if self.menu:
-            buttons = list(self.menu.buttons.filter(is_inline=False).all())
-            i_buttons = list(self.menu.buttons.filter(is_inline=True).all())
-
+    def send_message(self, message: Message,
+                     buttons: List[Button] = None,
+                     i_buttons: List[Button] = None):
+        # TODO simplify
         if buttons:
-            message += Message.keyboard(buttons, message.user_id)
+            message.buttons = message.buttons or [] + buttons
         if i_buttons:
-            message += Message.keyboard(i_buttons, message.user_id)
+            message.buttons = message.buttons or [] + list(i_buttons)
+        if self.menu:
+            message.buttons = message.buttons or [] + self.menu.button_list()
+            message.buttons = message.buttons or [] + self.menu.i_button_list()
 
         # TODO: make Massage parameter and handle him in api objects
         try:
@@ -318,7 +318,7 @@ class Account(models.Model):
         except RequestsLimitExceeded as err:
             self.info['error'] = str(err)
             # self.update(username=message.sender.username,
-            #                info=requestLimit)
+            #             info=requestLimit)
             log.exception(err)
 
 
@@ -361,10 +361,6 @@ class Menu(models.Model):
     def __repr__(self):
         return f'<bot_engine.Menu object ({self.id})>'
 
-    # def json_buttons(self) -> List[dict]:
-    #     # TODO
-    #     return [item.to_dict() for item in self.buttons.all()]
-
     def process_message(self, message: Message, account: Account):
         """
         Process the message with a bound handler.
@@ -388,14 +384,20 @@ class Menu(models.Model):
                 log.warning('The number of buttons found is different from one.'
                             ' This can lead to unplanned behavior.'
                             ' We recommend making the buttons unique.')
-        else:
-            self.run_handler(message, account)
+        elif self.handler:
+            self.call_handler(message, account)
 
     @property
-    def run_handler(self) -> Callable:
+    def call_handler(self) -> Callable:
         if not hasattr(self, '_handler'):
             self._handler = import_string(self.handler)
         return self._handler
+
+    def button_list(self) -> List[Button]:
+        return list(self.buttons.filter(is_inline=False).all())
+
+    def i_button_list(self) -> List[Button]:
+        return list(self.buttons.filter(is_inline=True).all())
 
 
 class Button(models.Model):
@@ -473,7 +475,7 @@ class Button(models.Model):
         if self.next_menu:
             account.update(menu=self.next_menu)
 
-            btn_list = self.next_menu.buttons.all() or None
+            btn_list = list(self.next_menu.buttons.all()) or None
             if self.next_menu.message:
                 msg_text = self.next_menu.message
                 account.send_message(Message.text(msg_text), buttons=btn_list)
@@ -481,10 +483,10 @@ class Button(models.Model):
                 account.send_message(Message.keyboard(btn_list))
 
         if self.handler:
-            self.run_handler(message, account)
+            self.call_handler(message, account)
 
     @property
-    def run_handler(self) -> Callable:
+    def call_handler(self) -> Callable:
         if not hasattr(self, '_handler'):
             self._handler = import_string(self.handler)
         return self._handler

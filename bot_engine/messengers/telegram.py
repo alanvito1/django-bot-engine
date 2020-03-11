@@ -96,8 +96,11 @@ class Telegram(BaseMessenger):
                      messages: Union[Message, List[Message]]) -> List[str]:
         message_ids = []
 
-        if not isinstance(messages, list):
-            messages = [messages]
+        if isinstance(messages, Message):
+            if messages.type == MessageType.MULTIPLE:
+                messages = messages.as_list()
+            else:
+                messages = [messages]
 
         for message in messages:
             try:
@@ -337,35 +340,58 @@ class Telegram(BaseMessenger):
         return message
 
     def _send_message(self, receiver: str, message: Message) -> str:
+        if message.buttons:
+            kb = types.ReplyKeyboardMarkup()
+            kb.add(*[x.text for x in message.buttons])
+        else:
+            kb = None
+
         # TODO implement chat work. now only tet-a-tet
         receiver = receiver.split('_')[0]
 
         if message.type == MessageType.TEXT:
-            msg_id = apihelper.send_message(self.token, receiver, message.text)
+            msg_id = apihelper.send_message(self.token, receiver, message.text,
+                                            reply_markup=kb)
         elif message.type == MessageType.STICKER:
-            msg_id = apihelper.send_message(self.token, receiver, message.text)
+            method_name = 'sendSticker'
+            data = {'chat_id': receiver, 'sticker': message.sticker_id}
+            msg_id = apihelper._make_request(self.token, method_name,
+                                             params=data, method='post')
         elif message.type == MessageType.PICTURE:
-            msg_id = apihelper.send_photo(self.token, receiver, message.text)
+            msg_id = apihelper.send_photo(self.token, receiver, message.text,
+                                          reply_markup=kb)
         elif message.type == MessageType.AUDIO:
-            msg_id = apihelper.send_audio(self.token, receiver, message.text)
+            msg_id = apihelper.send_audio(self.token, receiver, message.text,
+                                          reply_markup=kb)
         elif message.type == MessageType.VIDEO:
-            msg_id = apihelper.send_video(self.token, receiver, message.text)
+            msg_id = apihelper.send_video(self.token, receiver, message.text,
+                                          reply_markup=kb)
         elif message.type == MessageType.FILE:
-            msg_id = apihelper.send_data(self.token, receiver, message.text)
+            data = message.file_url
+            data_type = 'document'
+            msg_id = apihelper.send_data(self.token, receiver, data, data_type,
+                                         reply_markup=kb)
         elif message.type == MessageType.CONTACT:
-            msg_id = apihelper.send_contact(self.token, receiver, message.text)
+            contact = message.contact
+            msg_id = apihelper.send_contact(self.token, receiver,
+                                            contact.get('phone'),
+                                            contact.get('first_name'),
+                                            reply_markup=kb)
         elif message.type == MessageType.URL:
-            msg_id = apihelper.send_message(self.token, receiver, message.text)
+            msg_id = apihelper.send_message(self.token, receiver, message.text,
+                                            reply_markup=kb)
         elif message.type == MessageType.LOCATION:
-            msg_id = apihelper.send_location(self.token, receiver, message.text)
+            location = message.location
+            msg_id = apihelper.send_location(self.token, receiver,
+                                             location.get('latitude'),
+                                             location.get('longitude'),
+                                             reply_markup=kb)
         elif message.type == MessageType.RICHMEDIA:
-            msg_id = apihelper.send_message(self.token, receiver, message.text)
-        elif message.type == MessageType.KEYBOARD:
-            kb = types.ReplyKeyboardMarkup()
-            kb.add(*[x.text for x in message.buttons])
-            msg_id = apihelper.send_message(self.token, receiver, '', reply_markup=kb)
+            msg_id = apihelper.send_message(self.token, receiver, message.text,
+                                            reply_markup=kb)
         else:
-            msg_id = apihelper.send_message(self.token, receiver, message.text)
+            msg_id = apihelper.send_message(self.token, receiver, message.text,
+                                            reply_markup=kb)
 
         return f'{receiver}_{msg_id}'
 

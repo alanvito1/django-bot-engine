@@ -133,8 +133,11 @@ class Viber(BaseMessenger):
                      messages: Union[Message, List[Message]]) -> List[str]:
         vb_messages = []
 
-        if not isinstance(messages, list):
-            messages = [messages]
+        if isinstance(messages, Message):
+            if messages.type == MessageType.MULTIPLE:
+                messages = messages.as_list()
+            else:
+                messages = [messages]
 
         for message in messages:
             vb_messages.append(self._to_viber_message(message))
@@ -162,11 +165,11 @@ class Viber(BaseMessenger):
 
     @staticmethod
     def _from_viber_message(vb_request: ViberRequest) -> Message:
-        log.debug(f'{vb_request=}')
+        log.debug(f'vb_request={vb_request}')
 
         if isinstance(vb_request, v_requests.ViberMessageRequest):
             vb_message = vb_request.message
-            log.debug(f'{vb_message=}')
+            log.debug(f'vb_message={vb_message}')
 
             assert isinstance(vb_message, TypedMessage)
 
@@ -205,7 +208,7 @@ class Viber(BaseMessenger):
                     message_id=vb_request.message_token,
                     user_id=vb_request.sender.id,
                     timestamp=vb_request.timestamp,
-                    text=vb_message.rich_media,
+                    rich_media=vb_message.rich_media,
                     alt_text=vb_message.alt_text)
             elif isinstance(vb_message, v_messages.URLMessage):
                 return Message.url(
@@ -279,38 +282,45 @@ class Viber(BaseMessenger):
             text=str(vb_request))
 
     def _to_viber_message(self, message: Message) -> VbMessage:
+        if message.buttons:
+            kb = self._get_keyboard(message.buttons)
+        else:
+            kb = None
+
         # TODO recheck and finish all types
         if message.type == MessageType.TEXT:
-            return v_messages.TextMessage(text=message.text)
+            return v_messages.TextMessage(text=message.text, keyboard=kb)
         if message.type == MessageType.STICKER:
-            return v_messages.StickerMessage(sticker_id=message.sticker_id)
+            return v_messages.StickerMessage(sticker_id=message.sticker_id,
+                                             keyboard=kb)
         elif message.type == MessageType.PICTURE:
             return v_messages.PictureMessage(media=message.file_url,
-                                             text=message.text)
+                                             text=message.text,
+                                             keyboard=kb)
         elif message.type == MessageType.VIDEO:
             return v_messages.VideoMessage(media=message.file_url,
                                            size=message.file_size,
-                                           text=message.text)
+                                           text=message.text,
+                                           keyboard=kb)
         elif message.type in [MessageType.FILE, MessageType.AUDIO]:
             return v_messages.FileMessage(media=message.file_url,
                                           size=message.file_size,
-                                          file_name=message.file_name)
+                                          file_name=message.file_name,
+                                          keyboard=kb)
         elif message.type == MessageType.CONTACT:
             contact = message.contact
-            return v_messages.ContactMessage(contact=contact)
+            return v_messages.ContactMessage(contact=contact, keyboard=kb)
         elif message.type == MessageType.URL:
-            return v_messages.URLMessage(media=message.url)
+            return v_messages.URLMessage(media=message.url, keyboard=kb)
         elif message.type == MessageType.LOCATION:
             location = message.location
-            return v_messages.LocationMessage(location=location)
+            return v_messages.LocationMessage(location=location, keyboard=kb)
         elif message.type == MessageType.RICHMEDIA:
             rich_media = message.rich_media
             return v_messages.RichMediaMessage(rich_media=rich_media,
                                                alt_text=(message.text or
-                                                         message.alt_text))
-        elif message.type == MessageType.KEYBOARD:
-            kb = self._get_keyboard(message.buttons)
-            return v_messages.KeyboardMessage(keyboard=kb)
+                                                         message.alt_text),
+                                               keyboard=kb)
 
     @staticmethod
     def _get_keyboard(buttons: List[Union[Model, dict]]) -> dict:

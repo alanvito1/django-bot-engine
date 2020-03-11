@@ -66,6 +66,7 @@ class Message:
         self.location = None
         self.contact = None
         self.buttons = None
+        self.inline_buttons = None
 
         for key, value in kwargs.items():
             setattr(self, key, value)
@@ -246,10 +247,19 @@ class Message:
             assert (isinstance(msg, Message),
                     'All elements must be bot_engine.Message type')
 
-        im_type = messages[0].im_type
+        message_list = []
+        im_type = None
+        buttons = None
+        for message in messages:
+            if message.type == MessageType.MULTIPLE:
+                message_list += message.as_list()
+            else:
+                message_list.append(message)
+            im_type = message.im_type or im_type
+            buttons = message.buttons or buttons
 
         return cls(MessageType.MULTIPLE, messages=messages,
-                   im_type=im_type, **kwargs)
+                   im_type=im_type, buttons=buttons, **kwargs)
 
     def as_list(self) -> List[Message]:
         assert self.type == MessageType.MULTIPLE, ''
