@@ -3,7 +3,7 @@ import os
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SECRET_KEY = 'rb35h78hk40k7uu4p9jw0plr+)96u-y9yc0^x@q-)ems=&tql5'
-DEBUG = False
+DEBUG = True
 
 SITE_ID = 1
 ROOT_URLCONF = 'examplebot.urls'

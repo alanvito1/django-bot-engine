@@ -15,6 +15,7 @@ __all__ = (
 )
 
 
+# TODO remove Enum ?
 class MessengerType(Enum):
     NONE = 'none'
     # MESSENGER = 'messenger'

@@ -128,14 +128,14 @@ class AccountAdmin(admin.ModelAdmin):
     search_fields = ('id', 'username', 'utm_source')
     readonly_fields = ('id', 'info', 'messenger',
                        'is_active', 'updated', 'created')
-    actions = ('send_ping', )
+    actions = ('send_ping', 'update_info')
     fieldsets = (
         (None, {
-            'fields': ('id', ('messenger', 'is_active'), 'username', 'user'),
+            'fields': ('id', 'messenger', 'is_active', 'username', 'user'),
             'classes': ('extrapretty', 'wide'),
         }),
         (_('Info'), {
-            'fields': ('menu', 'context', 'utm_source', 'info',
+            'fields': ('info', 'menu', 'context', 'phone', 'utm_source',
                        'updated', 'created'),
             'classes': ('extrapretty', 'wide'),
         })
@@ -145,10 +145,15 @@ class AccountAdmin(admin.ModelAdmin):
         model = Account
 
     def send_ping(self, request, queryset):
-        # TODO: implement checking subscription
-        queryset.all()[0].send_message(Message(message_type=MessageType.TEXT,
-                                               text='ping'))
-    send_ping.short_description = _('Check account')
+        # TODO: implement checking subscription or ping message (mb. user_info?)
+        for account in queryset:
+            account.send_message(Message.text('ping'))
+    send_ping.short_description = _('Send ping')
+
+    def update_info(self, request, queryset):
+        for account in queryset:
+            account.update_info()
+    update_info.short_description = _('Update info')
 
 
 @admin.register(Menu)

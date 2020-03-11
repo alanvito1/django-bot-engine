@@ -5,6 +5,7 @@ from typing import Any, Callable, List, Optional, Type
 from uuid import uuid4
 
 from django.conf import settings
+# TODO make a custom JSONField inherited from TextField for others db's
 from django.contrib.postgres.fields import JSONField
 from django.contrib.sites.models import Site
 from django.db import models
@@ -15,7 +16,7 @@ from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
 from rest_framework.request import Request
 
-from .errors import MessengerException, NotSubscribed
+from .errors import MessengerException, NotSubscribed, RequestsLimitExceeded
 from .messengers import BaseMessenger, MessengerType
 from .types import Message, MessageType
 
@@ -23,41 +24,11 @@ from .types import Message, MessageType
 __all__ = ('Account', 'Button', 'Menu', 'Messenger')
 
 log = logging.getLogger(__name__)
+
+DOMAIN = Site.objects.get_current().domain
 BASE_HANDLER = 'bot_engine.bot_handlers.echo_handler'
 BUTTON_HANDLER = 'bot_engine.bot_handlers.echo_handler'
 ECHO_HANDLER = 'bot_engine.bot_handlers.echo_handler'
-
-
-# class DynamicHandlerMixin:
-#     """
-#     This mixin allows you to call the function declared in
-#     the "handler" field, and change the handler without restarting the server.
-#     """
-#     # prev_handler = models.CharField(
-#     #     _('old handler'), max_length=256,
-#     #     null=True, editable=False)
-#
-#     @property
-#     def run_handler(self) -> Callable:
-#         """
-#         Call an object that implements the interface of the BaseBot class.
-#         :return: handler object
-#         """
-#         # self.refresh_from_db(fields=['prev_handler', 'handler'])
-#         #
-#         # if self.prev_handler and self.prev_handler != self.handler:
-#         #     # clean
-#         #     del self._handler
-#
-#         if not hasattr(self, '_handler'):
-#             # # update
-#             # self.prev_handler = self.handler
-#             # self.save()
-#             # import
-#             handler_class = import_string(self.handler)
-#             self._handler = handler_class()
-#
-#         return self._handler
 
 
 class Messenger(models.Model):
@@ -81,8 +52,8 @@ class Messenger(models.Model):
         _('logo'), max_length=256,
         default='', blank=True,
         help_text=_('Relative URL. Required for some messenger APIs: Viber.'))
-    welcome_text = models.CharField(
-        _('welcome text'), max_length=512,
+    welcome_text = models.TextField(
+        _('welcome text'),
         default='', blank=True,
         help_text=_('Welcome message. Will be sent in response to the opening'
                     ' of the dialog (not a subscribe event). May be used with'
@@ -123,14 +94,16 @@ class Messenger(models.Model):
         return f'{self.title} ({self.api_type})'
 
     def __repr__(self):
-        return f'<Messenger ({self.api_type}:{self.token[:10]})>'
+        _hash = self.token_hash
+        return f'<bot_engine.Messenger object ({self.api_type}:{_hash})>'
 
-    def get_webhook_enable_url(self):
-        return reverse('bot_engine:enable', kwargs={'id': self.id})
+    def get_url_activating_webhook(self):
+        return reverse('bot_engine:activate', kwargs={'id': self.id})
 
-    def get_webhook_disable_url(self):
-        return reverse('bot_engine:disable', kwargs={'id': self.id})
+    def get_url_deactivating_webhook(self):
+        return reverse('bot_engine:deactivate', kwargs={'id': self.id})
 
+    @property
     def token_hash(self) -> str:
         if not self.hash:
             self.hash = md5(self.token.encode()).hexdigest()
@@ -145,62 +118,83 @@ class Messenger(models.Model):
         """
         message = self.api.parse_message(request)
 
+        log.debug(f'Dispatch; Incoming message={message};')
+
         if message.user_id:
-            account, created = (Account.objects.select_related('menu', 'user')
-                                .get_or_create(id=message.user_id,
-                                               defaults={'messenger': self,
-                                                         'menu': self.menu, }))
+            default = {
+                'username': message.user_name or message.user_id,
+                'messenger': self,
+                'menu': self.menu,
+                'is_active': True,
+            }
+            account, created = Account.objects.get_or_create(id=message.user_id,
+                                                             defaults=default)
             if created or not account.info:
-                try:
-                    user_info = self.api.get_user_info(message.user_id,
-                                                       chat_id=message.user_id)
-                    account.update(username=user_info.get('username'),
-                                   info=user_info.get('info'),
-                                   is_active=True)
-                except MessengerException as err:
-                    log.exception(err)
+                account.update_info()
         else:
             account = None
 
-        # log.debug(f'\nMessage={message};\nAccount={account};')
+        # log.debug(f'Dispatch; Message={message}; Account={account};')
 
         if message.is_service:
+            # TODO make service handler
             if (message.type == MessageType.START and account
                     and self.welcome_text):
+                account.send_message(Message.text(text=self.welcome_text))
                 return self.api.welcome_message(self.welcome_text)
             elif message.type == MessageType.UNSUBSCRIBED and account:
                 account.update(is_active=False)
-            # TODO: make service handler
             # self.process_service_message(message, account)
             return None
 
-        message, account = self.api.preprocess_message(message, account)
+        message = self.preprocess_message(message, account)
 
         if account.menu:
             account.menu.process_message(message, account)
         else:
             self.process_message(message, account)
 
+    def preprocess_message(self, message: Message, account: Account) -> Message:
+        """
+        Pre-process message data
+        Some messengers can understand the message only in context,
+        e.g. Telegram(from text to button)
+        :param message: bot_engine.Message object
+        :param account: bot_engine.Account object
+        :return: Message object
+        """
+        if self.api_type in [MessengerType.VIBER]:
+            return message
+
+        if (self.api_type in [MessengerType.TELEGRAM.value] and
+                message.type == MessageType.TEXT and account.menu):
+            for button in account.menu.buttons.all():
+                if message.text == button.text:
+                    message.type = MessageType.BUTTON
+
+        return message
+
     def process_message(self, message: Message, account: Account):
         """
         Process the message with a bound handler.
-        :param message: new incoming massage object
-        :param account: message sender object
+        :param message: bot_engine.Massage object
+        :param account: bot_engine.Account object
         :return: None
         """
         if self.handler:
-            self.run_handler(message, account)
+            self.call_handler(message, account)
 
     @property
-    def run_handler(self) -> Callable:
-        if not hasattr(self, '_handler'):
+    def call_handler(self) -> Callable:
+        # importing handler or hot reloading
+        if not hasattr(self, '_handler') or self.handler != self._old_handler:
             self._handler = import_string(self.handler)
+            self._old_handler = self.handler
         return self._handler
 
     def enable_webhook(self):
-        domain = Site.objects.get_current().domain
-        url = reverse('bot_engine:webhook', kwargs={'hash': self.token_hash()})
-        return self.api.enable_webhook(url=f'https://{domain}{url}')
+        url = reverse('bot_engine:webhook', kwargs={'hash': self.token_hash})
+        return self.api.enable_webhook(url=f'https://{DOMAIN}{url}')
 
     def disable_webhook(self):
         return self.api.disable_webhook()
@@ -208,25 +202,24 @@ class Messenger(models.Model):
     @property
     def api(self) -> BaseMessenger:
         if not hasattr(self, '_api'):
-            domain = Site.objects.get_current().domain
             url = self.logo
             self._api = self._api_class(
                 self.token, proxy=self.proxy, name=self.title,
-                avatar=f'https://{domain}{url}'
+                avatar=f'https://{DOMAIN}{url}'
             )
         return self._api
 
     @property
     def _api_class(self) -> Type[BaseMessenger]:
         """
-        Returns the connector class of saved type.
+        Returns the connector class of selected type.
         """
         return MessengerType(self.api_type).messenger_class
 
 
 class AccountManager(models.Manager):
     def get_queryset(self):
-        return super().get_queryset().select_related('user', 'messenger')
+        return super().get_queryset().select_related('user', 'messenger', 'menu')
 
 
 class Account(models.Model):
@@ -245,6 +238,9 @@ class Account(models.Model):
     context = JSONField(
         _('context'),
         default=dict, blank=True)
+    phone = models.CharField(
+        _('phone'), max_length=20,
+        null=True, blank=True)
 
     messenger = models.ForeignKey(
         'Messenger', models.SET_NULL,
@@ -277,10 +273,10 @@ class Account(models.Model):
         unique_together = ('id', 'messenger')
 
     def __str__(self):
-        return f'{self.username or self.id} ({self.messenger})'
+        return self.username or self.id
 
     def __repr__(self):
-        return f'<Account ({self.messenger}:{self.id})>'
+        return f'<bot_engine.Account object ({self.id})>'
 
     def update(self, **kwargs):
         for key, value in kwargs.items():
@@ -292,24 +288,37 @@ class Account(models.Model):
     def avatar(self) -> str:
         return self.info.get('avatar') or ''
 
-    def send_message(self, message: Message, buttons: List[Button] = None,
+    def send_message(self, message: Message,
+                     buttons: List[Button] = None,
                      i_buttons: List[Button] = None):
+        # TODO simplify
+        if buttons:
+            message.buttons = message.buttons or [] + buttons
+        if i_buttons:
+            message.buttons = message.buttons or [] + list(i_buttons)
         if self.menu:
-            buttons = buttons or self.menu.buttons.filter(is_inline=False).all()
-            i_buttons = (i_buttons or
-                         self.menu.buttons.filter(is_inline=True).all())
-
-        btn_list = buttons or None
-        ibtn_list = i_buttons or None
+            message.buttons = message.buttons or [] + self.menu.button_list()
+            message.buttons = message.buttons or [] + self.menu.i_button_list()
 
         # TODO: make Massage parameter and handle him in api objects
         try:
-            self.messenger.api.send_message(self.id, message.text,
-                                            button_list=btn_list)
+            self.messenger.api.send_message(self.id, message)
         except NotSubscribed:
             self.is_active = False
             log.warning(f'Account {self.username}:{self.id} is not subscribed.')
         except MessengerException as err:
+            log.exception(err)
+
+    def update_info(self):
+        try:
+            user_info = self.messenger.api.get_user_info(self.id,
+                                                         chat_id=self.id)
+            self.update(username=user_info.get('username'),
+                        info=user_info.get('info'))
+        except RequestsLimitExceeded as err:
+            self.info['error'] = str(err)
+            # self.update(username=message.sender.username,
+            #             info=requestLimit)
             log.exception(err)
 
 
@@ -350,10 +359,7 @@ class Menu(models.Model):
         return self.title
 
     def __repr__(self):
-        return f'<Menu ({self.title}:{self.id})>'
-
-    def json_buttons(self) -> List[dict]:
-        return [item.to_dict() for item in self.buttons.all()]
+        return f'<bot_engine.Menu object ({self.id})>'
 
     def process_message(self, message: Message, account: Account):
         """
@@ -362,6 +368,8 @@ class Menu(models.Model):
         :param account: message sender object
         :return: None
         """
+        # TODO check process
+        # TODO make permissions filter
         if message.is_button:
             buttons = self.buttons.filter(Q(command=message.text) |
                                           Q(text=message.text)).all()
@@ -370,20 +378,26 @@ class Menu(models.Model):
                                                 Q(text=message.text)).all()
 
             if buttons:
-                buttons[0].process_button(message, account)
+                return buttons[0].process_button(message, account)
 
             if not buttons or len(buttons) > 1:
                 log.warning('The number of buttons found is different from one.'
                             ' This can lead to unplanned behavior.'
                             ' We recommend making the buttons unique.')
-        else:
-            self.run_handler(message, account)
+        elif self.handler:
+            self.call_handler(message, account)
 
     @property
-    def run_handler(self) -> Callable:
+    def call_handler(self) -> Callable:
         if not hasattr(self, '_handler'):
             self._handler = import_string(self.handler)
         return self._handler
+
+    def button_list(self) -> List[Button]:
+        return list(self.buttons.filter(is_inline=False).all())
+
+    def i_button_list(self) -> List[Button]:
+        return list(self.buttons.filter(is_inline=True).all())
 
 
 class Button(models.Model):
@@ -445,7 +459,7 @@ class Button(models.Model):
         return self.title
 
     def __repr__(self):
-        return f'<Button ({self.title}:{self.command})>'
+        return f'<bot_engine.Button object ({self.command})>'
 
     def process_button(self, message: Message, account: Account):
         """
@@ -454,13 +468,14 @@ class Button(models.Model):
         :param account: message sender object
         :return: None
         """
+        # TODO check process
         if self.message:
             account.send_message(Message.text(self.message))
 
         if self.next_menu:
             account.update(menu=self.next_menu)
 
-            btn_list = self.next_menu.buttons.all() or None
+            btn_list = list(self.next_menu.buttons.all()) or None
             if self.next_menu.message:
                 msg_text = self.next_menu.message
                 account.send_message(Message.text(msg_text), buttons=btn_list)
@@ -468,18 +483,18 @@ class Button(models.Model):
                 account.send_message(Message.keyboard(btn_list))
 
         if self.handler:
-            self.run_handler(message, account)
+            self.call_handler(message, account)
 
     @property
-    def run_handler(self) -> Callable:
+    def call_handler(self) -> Callable:
         if not hasattr(self, '_handler'):
             self._handler = import_string(self.handler)
         return self._handler
 
     def save(self, *args, **kwargs):
         if not self.command:
-            rnd = uuid4().hex[:6]
-            self.command = slugify(f'btn-{self.title}-{rnd}')
+            rnd = uuid4().hex[::3]
+            self.command = f'btn-{slugify(self.title)}-{rnd}'
         super().save(*args, **kwargs)
 
     @property
@@ -487,8 +502,6 @@ class Button(models.Model):
         return self.handler or str(self.next_menu)
 
     def to_dict(self) -> dict:
-        return {
-            'text': self.title,
-            'command': self.command,
-            'size': (2, 1)
-        }
+        return {'text': self.title,
+                'command': self.command,
+                'size': (2, 1), }
