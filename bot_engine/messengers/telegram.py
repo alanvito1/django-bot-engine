@@ -194,32 +194,38 @@ class Telegram(BaseMessenger):
                 message_id=message_id,
                 user_id=user.get('id'),
                 timestamp=tg_message['date'],
+                file_id=tg_message['audio']['file_id'],
                 file_url=self.get_file_url(tg_message['audio']['file_id']),
                 file_size=tg_message['audio'].get('file_size'),
-                file_name=f'{tg_message["audio"]["performer"]} - {tg_message["audio"]["title"]}',
+                file_name=f'{tg_message["audio"].get("performer")} - '
+                          f'{tg_message["audio"].get("title")}',
                 file_duration=tg_message['audio'].get('duration'),
-                text=tg_message.get('text'),
-                alt_text=tg_message.get('caption'),
-                im_type='telegram')
+                mime_type=tg_message['audio'].get('mime_type'),
+                text=tg_message.get('caption'),
+                im_type='telegram'
+            )
         elif tg_message.get('document'):
             message = Message.file(
                 message_id=message_id,
                 user_id=user.get('id'),
                 timestamp=tg_message['date'],
+                file_id=tg_message['document']['file_id'],
                 file_url=self.get_file_url(tg_message['document']['file_id']),
                 file_size=tg_message['document'].get('file_size'),
                 file_name=tg_message['document']['file_name'],
-                text=tg_message.get('text'),
-                alt_text=tg_message.get('caption'),
+                mime_type=tg_message['document']['mime_type'],
+                text=tg_message['document'].get('caption'),
                 im_type='telegram')
         elif tg_message.get('animation'):
             message = Message.file(
                 message_id=message_id,
                 user_id=user.get('id'),
                 timestamp=tg_message['date'],
+                file_id=tg_message['animation']['file_id'],
                 file_url=self.get_file_url(tg_message['animation']['file_id']),
                 file_size=tg_message['animation'].get('file_size'),
                 file_name=tg_message['animation']['file_name'],
+                mime_type=tg_message['animation'].get('mime_type'),
                 text=tg_message.get('text'),
                 alt_text=tg_message.get('caption'),
                 im_type='telegram')
@@ -233,23 +239,35 @@ class Telegram(BaseMessenger):
                 alt_text=tg_message.get('caption'),
                 im_type='telegram')
         elif tg_message.get('photo'):
-            if len(tg_message['photo'][0]) > 1:
-                message = Message.multiple()
-                for photo in tg_message['photo'][0]:
-                    message += Message.picture(
-                        message_id=message_id,
-                        user_id=user.get('id'),
-                        timestamp=tg_message['date'],
-                        file_url=self.get_file_url(photo['file_id']),
-                        file_size=photo.get('file_size'),
-                        text=tg_message.get('text'),
-                        alt_text=tg_message.get('caption'),
-                        im_type='telegram')
+            if (isinstance(tg_message['photo'], list) and
+                    len(tg_message['photo']) > 1):
+                message = Message.picture(
+                    message_id=message_id,
+                    user_id=user.get('id'),
+                    timestamp=tg_message['date'],
+                    file_id=tg_message['photo'][-1]['file_id'],
+                    file_url=self.get_file_url(tg_message['photo'][-1]['file_id']),
+                    file_size=tg_message['photo'][-1].get('file_size'),
+                    text=tg_message.get('text'),
+                    alt_text=tg_message.get('caption'),
+                    im_type='telegram')
+                # message = Message.multiple()
+                # for photo in tg_message['photo'][0]:
+                #     message += Message.picture(
+                #         message_id=message_id,
+                #         user_id=user.get('id'),
+                #         timestamp=tg_message['date'],
+                #         file_url=self.get_file_url(photo['file_id']),
+                #         file_size=photo.get('file_size'),
+                #         text=tg_message.get('text'),
+                #         alt_text=tg_message.get('caption'),
+                #         im_type='telegram')
             else:
                 message = Message.picture(
                     message_id=message_id,
                     user_id=user.get('id'),
                     timestamp=tg_message['date'],
+                    file_id=tg_message['photo'][-1]['file_id'],
                     file_url=self.get_file_url(tg_message['photo'][0][0]['file_id']),
                     file_size=tg_message['photo'][0][0].get('file_size'),
                     text=tg_message.get('text'),
@@ -260,44 +278,54 @@ class Telegram(BaseMessenger):
                 message_id=message_id,
                 user_id=user.get('id'),
                 timestamp=tg_message['date'],
+                file_id=tg_message['sticker']['file_id'],
                 file_url=self.get_file_url(tg_message['sticker']['file_id']),
                 file_size=tg_message['sticker'].get('file_size'),
-                text=tg_message.get('text'),
-                alt_text=tg_message.get('caption'),
+                sticker_id=tg_message['sticker']['file_id'],
                 im_type='telegram')
         elif tg_message.get('video'):
             message = Message.video(
                 message_id=message_id,
                 user_id=user.get('id'),
                 timestamp=tg_message['date'],
-                file_url=self.get_file_url(tg_message['video']['file_id']),
+                file_id=tg_message['video']['file_id'],
+                file_url='',
+                # file_url=self.get_file_url(tg_message['video']['file_id']),
                 file_size=tg_message['video'].get('file_size'),
                 file_duration=tg_message['video'].get('duration'),
-                text=tg_message.get('text'),
-                alt_text=tg_message.get('caption'),
-                im_type='telegram')
+                mime_type=tg_message['video'].get('mime_type'),
+                text=tg_message['video'].get('caption'),
+                im_type='telegram'
+            )
         elif tg_message.get('voice'):
             message = Message.audio(
                 message_id=message_id,
                 user_id=user.get('id'),
                 timestamp=tg_message['date'],
+                file_id=tg_message['voice']['file_id'],
                 file_url=self.get_file_url(tg_message['voice']['file_id']),
                 file_size=tg_message['voice'].get('file_size'),
                 file_duration=tg_message['voice'].get('duration'),
-                text=tg_message.get('text'),
-                alt_text=tg_message.get('caption'),
-                im_type='telegram')
+                mime_type=tg_message['voice'].get('mime_type'),
+                is_voice=True,
+                text=tg_message.get('caption'),
+                im_type='telegram'
+            )
         elif tg_message.get('video_note'):
             message = Message.video(
                 message_id=message_id,
                 user_id=user.get('id'),
                 timestamp=tg_message['date'],
+                file_id=tg_message['video_note']['file_id'],
                 file_url=self.get_file_url(tg_message['video_note']['file_id']),
                 file_size=tg_message['video_note'].get('file_size'),
                 file_duration=tg_message['video_note'].get('duration'),
+                file_length=tg_message['video_note'].get('length'),
+                is_video_note=True,
                 text=tg_message.get('text'),
                 alt_text=tg_message.get('caption'),
-                im_type='telegram')
+                im_type='telegram'
+            )
         elif tg_message.get('contact'):
             message = Message.contact(
                 message_id=message_id,
@@ -306,7 +334,8 @@ class Telegram(BaseMessenger):
                 contact=tg_message['contact'],
                 text=tg_message.get('text'),
                 alt_text=tg_message.get('caption'),
-                im_type='telegram')
+                im_type='telegram'
+            )
         elif tg_message.get('location'):
             message = Message.location(
                 message_id=message_id,
@@ -315,7 +344,8 @@ class Telegram(BaseMessenger):
                 location=tg_message['location'],
                 text=tg_message.get('text'),
                 alt_text=tg_message.get('caption'),
-                im_type='telegram')
+                im_type='telegram'
+            )
         elif tg_message.get('venue'):
             message = Message.location(
                 message_id=message_id,
@@ -324,7 +354,8 @@ class Telegram(BaseMessenger):
                 location=tg_message['venue']['location'],
                 text=tg_message['venue']['title'] or tg_message.get('text'),
                 alt_text=tg_message['venue']['address'] or tg_message.get('caption'),
-                im_type='telegram')
+                im_type='telegram'
+            )
         else:
             message = Message.text(
                 message_id=message_id,
@@ -332,7 +363,8 @@ class Telegram(BaseMessenger):
                 timestamp=tg_message['date'],
                 text=tg_message.get('text'),
                 alt_text=tg_message.get('caption'),
-                im_type='telegram')
+                im_type='telegram'
+            )
 
         if message.text == '/start':
             message.type = MessageType.START
@@ -346,52 +378,118 @@ class Telegram(BaseMessenger):
         else:
             kb = None
 
+        reply_to_id = (message.reply_to_id.split('_')[1]
+                       if message.reply_to_id else None)
+
         # TODO implement chat work. now only tet-a-tet
         receiver = receiver.split('_')[0]
 
         if message.type == MessageType.TEXT:
-            msg_id = apihelper.send_message(self.token, receiver, message.text,
-                                            reply_markup=kb)
+            msg_id = apihelper.send_message(
+                self.token, receiver, message.text,
+                reply_to_message_id=reply_to_id,
+                reply_markup=kb
+            )
         elif message.type == MessageType.STICKER:
             method_name = 'sendSticker'
             data = {'chat_id': receiver, 'sticker': message.sticker_id}
-            msg_id = apihelper._make_request(self.token, method_name,
-                                             params=data, method='post')
+            if reply_to_id:
+                data.update(reply_to_message_id=reply_to_id)
+            msg_id = apihelper._make_request(
+                self.token, method_name,
+                params=data, method='post'
+            )
         elif message.type == MessageType.PICTURE:
-            msg_id = apihelper.send_photo(self.token, receiver, message.text,
-                                          reply_markup=kb)
+            picture = message.file_id or message.file_url
+            msg_id = apihelper.send_photo(
+                self.token, receiver, picture,
+                caption=message.text,
+                reply_to_message_id=reply_to_id,
+                reply_markup=kb
+            )
         elif message.type == MessageType.AUDIO:
-            msg_id = apihelper.send_audio(self.token, receiver, message.text,
-                                          reply_markup=kb)
+            audio = message.file_id or message.file_url
+            if message.is_voice:
+                msg_id = apihelper.send_voice(
+                    self.token, receiver, audio,
+                    duration=message.file_duration,
+                    caption=message.text,
+                    reply_to_message_id=reply_to_id,
+                    reply_markup=kb
+                )
+            else:
+                msg_id = apihelper.send_audio(
+                    self.token, receiver, audio,
+                    title=message.file_name,
+                    duration=message.file_duration,
+                    caption=message.text,
+                    reply_to_message_id=reply_to_id,
+                    reply_markup=kb
+                )
         elif message.type == MessageType.VIDEO:
-            msg_id = apihelper.send_video(self.token, receiver, message.text,
-                                          reply_markup=kb)
+            video = message.file_id or message.file_url
+            if message.is_video_note:
+                msg_id = apihelper.send_video_note(
+                    self.token, receiver, video,
+                    duration=message.file_duration,
+                    length=message.file_length,
+                    reply_to_message_id=reply_to_id,
+                    reply_markup=kb
+                )
+            else:
+                msg_id = apihelper.send_video(
+                    self.token, receiver, video,
+                    duration=message.file_duration,
+                    caption=message.text,
+                    reply_to_message_id=reply_to_id,
+                    reply_markup=kb
+                )
         elif message.type == MessageType.FILE:
-            data = message.file_url
+            data = message.file_id or message.file_url
             data_type = 'document'
-            msg_id = apihelper.send_data(self.token, receiver, data, data_type,
-                                         reply_markup=kb)
+            msg_id = apihelper.send_data(
+                self.token, receiver, data, data_type,
+                caption=message.text,
+                reply_to_message_id=reply_to_id,
+                reply_markup=kb
+            )
         elif message.type == MessageType.CONTACT:
             contact = message.contact
-            msg_id = apihelper.send_contact(self.token, receiver,
-                                            contact.get('phone'),
-                                            contact.get('first_name'),
-                                            reply_markup=kb)
+            msg_id = apihelper.send_contact(
+                self.token, receiver,
+                contact.get('phone'),
+                contact.get('first_name'),
+                reply_to_message_id=reply_to_id,
+                reply_markup=kb
+            )
         elif message.type == MessageType.URL:
-            msg_id = apihelper.send_message(self.token, receiver, message.text,
-                                            reply_markup=kb)
+            msg_id = apihelper.send_message(
+                self.token, receiver, message.text,
+                reply_to_message_id=reply_to_id,
+                reply_markup=kb
+            )
         elif message.type == MessageType.LOCATION:
             location = message.location
-            msg_id = apihelper.send_location(self.token, receiver,
-                                             location.get('latitude'),
-                                             location.get('longitude'),
-                                             reply_markup=kb)
+            msg_id = apihelper.send_location(
+                self.token, receiver,
+                location.get('latitude'),
+                location.get('longitude'),
+                reply_to_message_id=reply_to_id,
+                reply_markup=kb
+            )
         elif message.type == MessageType.RICHMEDIA:
-            msg_id = apihelper.send_message(self.token, receiver, message.text,
-                                            reply_markup=kb)
+            msg_id = apihelper.send_message(
+                self.token, receiver, message.text,
+                parse_mode=message.rich_media,
+                reply_to_message_id=reply_to_id,
+                reply_markup=kb
+            )
         else:
-            msg_id = apihelper.send_message(self.token, receiver, message.text,
-                                            reply_markup=kb)
+            msg_id = apihelper.send_message(
+                self.token, receiver, message.text,
+                reply_to_message_id=reply_to_id,
+                reply_markup=kb
+            )
 
         return f'{receiver}_{msg_id}'
 

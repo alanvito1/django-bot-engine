@@ -5,9 +5,9 @@ from bot_engine.types import Message
 
 
 def main_menu_echo(message: Message, account: Account):
+    if account.context.get('reply'):
+        message.reply_to_id = message.id
     account.send_message(message)
-    # TODO handle others message types
-    # TODO answer mod
 
 
 def submenu_text(message: Message, account: Account):
@@ -28,4 +28,11 @@ def button_menu(message: Message, account: Account):
 
 
 def button_answer_type(message: Message, account: Account):
-    account.send_message(message)
+    if account.context.get('reply'):
+        account.context['reply'] = False
+        account.save()
+        account.send_message(Message.text('Reply disabled'))
+    else:
+        account.context['reply'] = True
+        account.save()
+        account.send_message(Message.text('Reply enabled'))

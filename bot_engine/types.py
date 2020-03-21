@@ -53,15 +53,24 @@ class Message:
         self.timestamp = timestamp
         self.im_type = im_type
 
+        self.reply_to_id = None
+
         self.user_name = None
         self.context = None
         self.text = None
         self.alt_text = None
-        self.sticker_id = None
         self.rich_media = None
+
+        self.sticker_id = None
+        self.file_id = None
         self.file_url = None
         self.file_size = None
         self.file_name = None
+        self.file_duration = None
+        self.mime_type = None
+        self.is_voice = None
+        self.is_video_note = None
+
         self.url = None
         self.location = None
         self.contact = None
@@ -70,10 +79,6 @@ class Message:
 
         for key, value in kwargs.items():
             setattr(self, key, value)
-
-        # self.user_name = kwargs.get('user_name')
-        # self.context = kwargs.get('context')
-        # self.error = kwargs.get('error')
 
     def __str__(self) -> str:
         return f'Message({self.type}, id={self.id}, ' \
