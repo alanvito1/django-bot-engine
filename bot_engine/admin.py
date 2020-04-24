@@ -6,71 +6,80 @@ from django.forms.widgets import Select
 from django.template.defaultfilters import pluralize
 from django.utils.translation import gettext_lazy as _
 
+from . import bot
 from .models import Messenger, Account, Menu, Button
-from .types import Message, MessageType
+from .types import Message
 
 
 log = logging.getLogger(__name__)
 
 
-# class ChatbotSelectWidget(Select):
-#     """
-#     Widget that lets you choose between chatbot classes.
-#     """
-#     _choices = None
-#
-#     @staticmethod
-#     def chatbots_as_choices():
-#         if len(bot_handler.chatbots) <= 1:
-#             # TODO scan apps
-#             pass
-#         tasks = list(sorted(name for name in bot_handler.chatbots))
-#         return (('', ''), ) + tuple(zip(tasks, tasks))
-#
-#     @property
-#     def choices(self):
-#         if self._choices is None:
-#             self._choices = self.chatbots_as_choices()
-#         return self._choices
-#
-#     @choices.setter
-#     def choices(self, _):
-#         # ChoiceField.__init__ sets ``self.choices = choices``
-#         # which would override ours.
-#         pass
-#
-#
-# class ChatbotChoiceField(forms.ChoiceField):
-#     """
-#     Field that lets you choose between chatbot classes.
-#     """
-#     widget = ChatbotSelectWidget
-#
-#     def valid_value(self, value):
-#         return True
-#
-#
-# class MessengerForm(forms.ModelForm):
-#     """
-#     Form that lets you create and modify periodic tasks.
-#     """
-#     handler = ChatbotChoiceField(
-#         label=_('Chatbot handler'),
-#         required=False, )
-#
-#     class Meta:
-#         model = Messenger
-#         exclude = ()
-#
-#     # def clean(self):
-#     #     data = super().clean()
-#     #     handler_class = data.get('handler_class')
-#     #     return data
+class HandlerSelectWidget(Select):
+    """
+    Widget that lets you choose between chatbot handlers functions.
+    """
+    _choices = None
+
+    @staticmethod
+    def handlers_as_choices():
+        handlers = list(sorted(name for name in bot.handlers.keys()))
+        return (('', ''), ) + tuple(zip(handlers, handlers))
+
+    @property
+    def choices(self):
+        if self._choices is None:
+            self._choices = self.handlers_as_choices()
+        return self._choices
+
+    @choices.setter
+    def choices(self, _):
+        # ChoiceField.__init__ sets ``self.choices = choices``
+        # which would override ours.
+        pass
+
+
+class HandlerChoiceField(forms.ChoiceField):
+    """
+    Field that lets you choose between chatbot handlers.
+    """
+    widget = HandlerSelectWidget
+
+
+class MessengerForm(forms.ModelForm):
+    """
+    Form that lets you create and modify messenger accounts.
+    """
+    handler_list = HandlerChoiceField(
+        label=_('Handler (registered)'),
+        required=False, )
+    handler = forms.CharField(
+        label=_('Handler (custom)'),
+        required=False, )
+
+    class Meta:
+        model = Messenger
+        exclude = ()
+
+    def clean(self):
+        data = super().clean()
+        handler_list = data.get('handler_list')
+
+        if handler_list:
+            data['handler'] = handler_list
+        if not data['handler']:
+            exc = forms.ValidationError(_('Need name of handler'))
+            self._errors['handler'] = self.error_class(exc.messages)
+            raise exc
+
+        return data
 
 
 @admin.register(Messenger)
 class MessengerAdmin(admin.ModelAdmin):
-    # form = MessengerForm
+    """
+    Admin-interface for messenger accounts.
+    """
+    form = MessengerForm
 
     list_display = ('title', 'api_type', 'menu', 'proxy', 'is_active')
     list_filter = ('api_type', 'menu', 'is_active', 'updated')
@@ -79,8 +88,8 @@ class MessengerAdmin(admin.ModelAdmin):
     actions = ('enable_webhook', 'disable_webhook')
     fieldsets = (
         (None, {
-            'fields': ('title', ('api_type', 'is_active'), 'handler',
-                       'welcome_text', 'menu', 'logo'),
+            'fields': ('title', 'api_type', 'is_active', 'handler_list',
+                       'handler', 'welcome_text', 'menu', 'logo'),
             'classes': ('extrapretty', 'wide'),
         }),
         (_('Authenticate'), {
@@ -89,7 +98,7 @@ class MessengerAdmin(admin.ModelAdmin):
         }),
         (_('Proxy'), {
             'fields': ('proxy', ),
-            'classes': ('extrapretty', 'wide'),
+            'classes': ('extrapretty', 'wide', 'collapse', 'in'),
         })
     )
 
@@ -120,8 +129,31 @@ class MessengerAdmin(admin.ModelAdmin):
     disable_webhook.short_description = _('Disable webhook selected messengers')
 
 
+# class AccountForm(forms.ModelForm):
+#     """
+#     Form that lets you create and modify chatbot handlers.
+#     """
+#     def _clean_json(self, field):
+#         value = self.cleaned_data[field]
+#
+#         try:
+#             json.loads(value)
+#         except ValueError as exc:
+#             raise forms.ValidationError(
+#                 _('Unable to parse JSON: %s') % exc,
+#             )
+#
+#         return value
+#
+#     def clean_context(self):
+#         return self._clean_json('context')
+
+
 @admin.register(Account)
 class AccountAdmin(admin.ModelAdmin):
+    """
+    Admin-interface for user messenger accounts.
+    """
     list_display = ('__str__', 'messenger', 'menu', 'user',
                     'utm_source', 'is_active', 'updated')
     list_filter = ('messenger', 'utm_source', 'is_active', 'updated', 'created')
@@ -156,15 +188,50 @@ class AccountAdmin(admin.ModelAdmin):
     update_info.short_description = _('Update info')
 
 
+class MenuForm(forms.ModelForm):
+    """
+    Form that lets you create and modify chatbot menus.
+    """
+    handler_list = HandlerChoiceField(
+        label=_('Handler (registered)'),
+        required=False, )
+    handler = forms.CharField(
+        label=_('Handler (custom)'),
+        required=False, )
+
+    class Meta:
+        model = Menu
+        exclude = ()
+
+    def clean(self):
+        data = super().clean()
+        handler_list = data.get('handler_list')
+
+        if handler_list:
+            data['handler'] = handler_list
+        if not data['handler']:
+            exc = forms.ValidationError(_('Need name of handler'))
+            self._errors['handler'] = self.error_class(exc.messages)
+            raise exc
+
+        return data
+
+
 @admin.register(Menu)
 class MenuAdmin(admin.ModelAdmin):
+    """
+    Admin-interface for chatbot menus.
+    """
+    form = MenuForm
+
     list_display = ('title', 'message', 'comment', 'updated')
     list_filter = ('updated', 'created')
     search_fields = ('title', 'message', 'comment', 'handler')
     filter_horizontal = ('buttons', )
     fieldsets = (
         (None, {
-            'fields': ('title', 'message', 'comment', 'handler', 'buttons'),
+            'fields': ('title', 'message', 'comment',
+                       'handler_list', 'handler', 'buttons'),
             'classes': ('extrapretty', 'wide'),
         }),
     )
@@ -173,59 +240,61 @@ class MenuAdmin(admin.ModelAdmin):
         model = Menu
 
 
-# class ButtonSelectWidget(Select):
-#     """
-#     Widget that lets you choose between chatbot classes.
-#     """
-#     _choices = None
-#
-#     @staticmethod
-#     def items_as_choices():
-#         if len(bot_handler.chatbots) <= 1:
-#             # TODO: scan apps
-#             pass
-#         tasks = list(sorted(name for name in bot_handler.menu_handlers))
-#         return (('', ''), ) + tuple(zip(tasks, tasks))
-#
-#     @property
-#     def choices(self):
-#         if self._choices is None:
-#             self._choices = self.items_as_choices()
-#         return self._choices
-#
-#     @choices.setter
-#     def choices(self, _):
-#         # ChoiceField.__init__ sets ``self.choices = choices``
-#         # which would override ours.
-#         pass
-#
-#
-# class ButtonChoiceField(forms.ChoiceField):
-#     """
-#     Field that lets you choose between chatbot classes.
-#     """
-#     widget = ButtonSelectWidget
-#
-#     def valid_value(self, value):
-#         return True
-#
-#
-# class ButtonForm(forms.ModelForm):
-#     """
-#     Form that lets you create and modify periodic tasks.
-#     """
-#     handler_method = ButtonChoiceField(
-#         label=_('handler'),
-#         required=False)
-#
-#     class Meta:
-#         model = Button
-#         exclude = ()
+class ButtonHandlerSelectWidget(HandlerSelectWidget):
+    """
+    Widget that lets you choose between chatbot button handlers functions.
+    """
+    @staticmethod
+    def handlers_as_choices():
+        handlers = list(sorted(name for name in bot.button_handlers.keys()))
+        return (('', ''), ) + tuple(zip(handlers, handlers))
+
+
+class ButtonHandlerChoiceField(forms.ChoiceField):
+    """
+    Field that lets you choose between chatbot button handlers.
+    """
+    widget = ButtonHandlerSelectWidget
+
+    def valid_value(self, value):
+        return True
+
+
+class ButtonForm(forms.ModelForm):
+    """
+    Form that lets you create and modify chatbot buttons.
+    """
+    handler_list = ButtonHandlerChoiceField(
+        label=_('Handler (registered)'),
+        required=False, )
+    handler = forms.CharField(
+        label=_('Handler (custom)'),
+        required=False, )
+
+    class Meta:
+        model = Button
+        exclude = ()
+
+    def clean(self):
+        data = super().clean()
+        handler_list = data.get('handler_list')
+
+        if handler_list:
+            data['handler'] = handler_list
+        if not data['handler']:
+            exc = forms.ValidationError(_('Need name of handler'))
+            self._errors['handler'] = self.error_class(exc.messages)
+            raise exc
+
+        return data
 
 
 @admin.register(Button)
 class ButtonAdmin(admin.ModelAdmin):
-    # form = ButtonForm
+    """
+    Admin-interface for chatbot buttons.
+    """
+    form = ButtonForm
 
     list_display = ('title', 'text', 'comment', 'next_menu',
                     'is_inline', 'for_staff', 'for_admin', 'is_active')
@@ -234,8 +303,8 @@ class ButtonAdmin(admin.ModelAdmin):
     readonly_fields = ('command', )
     fieldsets = (
         (None, {
-            'fields': ('title', 'text', 'command',
-                       'message', 'comment', 'handler', 'next_menu',
+            'fields': ('title', 'text', 'command', 'message', 'comment',
+                       'handler_list', 'handler', 'next_menu',
                        ('for_staff', 'for_admin'), ('is_inline', 'is_active')),
             'classes': ('extrapretty', 'wide'),
         }),

@@ -26,9 +26,9 @@ __all__ = ('Account', 'Button', 'Menu', 'Messenger')
 log = logging.getLogger(__name__)
 
 DOMAIN = Site.objects.get_current().domain
-BASE_HANDLER = 'bot_engine.bot_handlers.echo_handler'
-BUTTON_HANDLER = 'bot_engine.bot_handlers.echo_handler'
-ECHO_HANDLER = 'bot_engine.bot_handlers.echo_handler'
+ECHO_HANDLER = 'bot_engine.bot_handlers.simple_echo'
+BUTTON_HANDLER = 'bot_engine.bot_handlers.button_echo'
+BASE_HANDLER = ECHO_HANDLER
 
 
 class Messenger(models.Model):
@@ -61,8 +61,7 @@ class Messenger(models.Model):
 
     handler = models.CharField(
         _('main handler'), max_length=256,
-        # choices=_handler_choices,
-        default=ECHO_HANDLER,
+        default=BASE_HANDLER, blank=True,
         help_text=_('It processes all messages that do not fall into '
                     'the menu and button handlers. To implement a handler, '
                     f'implement a {BASE_HANDLER} interface.'))
@@ -336,9 +335,9 @@ class Menu(models.Model):
         help_text=_('Comment text. Does not affect functionality.'))
     handler = models.CharField(
         _('handler'), max_length=256,
-        default=ECHO_HANDLER, blank=True,
+        default='', blank=True,
         help_text=_(f'Your handler implementation must implement '
-                    f'the {BASE_HANDLER} interface.'))
+                    f'the {ECHO_HANDLER} interface.'))
 
     # TODO: implement button order
     buttons = models.ManyToManyField(
@@ -405,7 +404,7 @@ class Button(models.Model):
         _('title'), max_length=256)
     text = models.CharField(
         _('text'), max_length=256,
-        help_text=_('Button text.'))
+        help_text=_('Button text displayed.'))
     message = models.CharField(
         _('message'), max_length=1024,
         null=True, blank=True,
@@ -418,8 +417,7 @@ class Button(models.Model):
 
     handler = models.CharField(
         _('handler'), max_length=256,
-        # default=ECHO_HANDLER,
-        blank=True,
+        default='', blank=True,
         help_text=_(f'Your handler implementation must implement '
                     f'the {BUTTON_HANDLER} interface.'))
     next_menu = models.ForeignKey(

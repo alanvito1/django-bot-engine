@@ -1,25 +1,21 @@
 #!/usr/bin/env python
-
 from setuptools import setup
+
+from bot_engine import __version__
 
 
 setup(
     name='django-bot-engine',
-    version='0.1.1',
+    version=__version__,
     description='Django application for creating bots for different chat platforms.',
+    long_description=open('README.md').read(),
+    long_description_content_type='text/markdown',
     url='https://github.com/terentjew-alexey/django-bot-engine',
-    license='Apache 2.0',
+    license='Apache License 2.0',
     author='Aleksey Terentyev',
     author_email='terentjew.alexey@gmail.com',
+    install_requires=open('requirements.txt').readlines(),
     packages=['bot_engine', 'bot_engine.messengers'],
-    install_requires=[
-        'urllib3',
-        'PySocks>=1.7',
-        'requests[socks]>=2.22',
-        'djangorestframework>=3.11,<4.0',
-        'viberbot>=1.0.11',
-        'pyTelegramBotAPI'
-    ],
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',
         'Framework :: Django',

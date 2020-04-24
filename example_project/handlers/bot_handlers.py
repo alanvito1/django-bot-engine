@@ -1,15 +1,18 @@
 import json
 
+from bot_engine import bot
 from bot_engine.models import Account
 from bot_engine.types import Message
 
 
+@bot.handler
 def main_menu_echo(message: Message, account: Account):
     if account.context.get('reply'):
         message.reply_to_id = message.id
     account.send_message(message)
 
 
+@bot.handler
 def submenu_text(message: Message, account: Account):
     answer = Message.text(text=f'This is a submenu handler. '
                                f'You sent me this message:')
@@ -17,16 +20,19 @@ def submenu_text(message: Message, account: Account):
     account.send_message(message)
 
 
+@bot.handler
 def button_context(message: Message, account: Account):
     answer = Message.text(text=json.dumps(account.context))
     account.send_message(answer)
 
 
+@bot.handler
 def button_menu(message: Message, account: Account):
     answer = Message.text(text=str(account.menu))
     account.send_message(answer)
 
 
+@bot.button_handler
 def button_answer_type(message: Message, account: Account):
     if account.context.get('reply'):
         account.context['reply'] = False

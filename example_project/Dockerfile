@@ -14,11 +14,11 @@ RUN apk update && apk add libpq && \
     pip install -U django djangorestframework && \
     apk del .build-deps
 
-RUN pip install -U https://github.com/terentjew-alexey/django-bot-engine/archive/development.zip
+RUN pip install -U https://github.com/terentjew-alexey/django-bot-engine/archive/develop.zip
 
 WORKDIR /usr/src/app
 COPY . .
 
 EXPOSE 8000
 
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000", "--reload"]
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
