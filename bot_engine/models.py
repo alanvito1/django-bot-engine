@@ -15,6 +15,7 @@ from django.utils.module_loading import import_string
 from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
 from rest_framework.request import Request
+from sortedm2m.fields import SortedManyToManyField
 
 from .errors import MessengerException, NotSubscribed, RequestsLimitExceeded
 from .messengers import BaseMessenger, MessengerType
@@ -339,9 +340,9 @@ class Menu(models.Model):
         help_text=_(f'Your handler implementation must implement '
                     f'the {ECHO_HANDLER} interface.'))
 
-    # TODO: implement button order
-    buttons = models.ManyToManyField(
+    buttons = SortedManyToManyField(
         'Button', blank=True,
+        sort_value_field_name='order',
         verbose_name=_('buttons'), related_name='menus')
 
     updated = models.DateTimeField(

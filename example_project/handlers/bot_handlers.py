@@ -20,13 +20,13 @@ def submenu_text(message: Message, account: Account):
     account.send_message(message)
 
 
-@bot.handler
+@bot.button_handler
 def button_context(message: Message, account: Account):
     answer = Message.text(text=json.dumps(account.context))
     account.send_message(answer)
 
 
-@bot.handler
+@bot.button_handler
 def button_menu(message: Message, account: Account):
     answer = Message.text(text=str(account.menu))
     account.send_message(answer)
