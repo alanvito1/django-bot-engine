@@ -4,7 +4,6 @@ services:
   postgres:
     image: postgres:12-alpine
     container_name: examplebot_postgres
-    network_mode: host
     restart: always
     environment:
       - POSTGRES_DB=examplebot
@@ -16,7 +15,6 @@ services:
   app:
     build: .
     container_name: examplebot
-    network_mode: host
     restart: always
     ports:
       - 8000:8000
