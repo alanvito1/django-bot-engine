@@ -26,7 +26,6 @@ __all__ = ('Account', 'Button', 'Menu', 'Messenger')
 
 log = logging.getLogger(__name__)
 
-DOMAIN = Site.objects.get_current().domain
 ECHO_HANDLER = 'bot_engine.bot_handlers.simple_echo'
 BUTTON_HANDLER = 'bot_engine.bot_handlers.button_echo'
 BASE_HANDLER = ECHO_HANDLER
@@ -193,8 +192,9 @@ class Messenger(models.Model):
         return self._handler
 
     def enable_webhook(self):
+        domain = Site.objects.get_current().domain
         url = reverse('bot_engine:webhook', kwargs={'hash': self.token_hash})
-        return self.api.enable_webhook(url=f'https://{DOMAIN}{url}')
+        return self.api.enable_webhook(url=f'https://{domain}{url}')
 
     def disable_webhook(self):
         return self.api.disable_webhook()
@@ -202,10 +202,11 @@ class Messenger(models.Model):
     @property
     def api(self) -> BaseMessenger:
         if not hasattr(self, '_api'):
+            domain = Site.objects.get_current().domain
             url = self.logo
             self._api = self._api_class(
                 self.token, proxy=self.proxy, name=self.title,
-                avatar=f'https://{DOMAIN}{url}'
+                avatar=f'https://{domain}{url}'
             )
         return self._api
 
