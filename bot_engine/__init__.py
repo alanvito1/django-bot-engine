@@ -5,7 +5,7 @@ from django.utils.module_loading import autodiscover_modules
 
 
 __title__ = 'Django bot api'
-__version__ = '0.1.1'
+__version__ = '0.1.2'
 __author__ = 'Aleksey Terentyev'
 __license__ = 'Apache License 2.0'
 __copyright__ = 'Copyright 2019-2020 Aleksey Terentyev'
