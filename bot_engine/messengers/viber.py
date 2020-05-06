@@ -26,9 +26,7 @@ class Viber(BaseMessenger):
     IM connector for Viber REST API
     """
 
-    #############
-    # Interface #
-    #############
+    # region Interface
 
     def __init__(self, token: str, **kwargs):
         super().__init__(token, **kwargs)
@@ -159,9 +157,9 @@ class Viber(BaseMessenger):
             "text": text
         }
 
-    ################
-    # Help methods #
-    ################
+    # endregion
+
+    # region Help methods
 
     @staticmethod
     def _from_viber_message(vb_request: ViberRequest) -> Message:
@@ -323,7 +321,7 @@ class Viber(BaseMessenger):
                                                keyboard=kb)
 
     @staticmethod
-    def _get_keyboard(buttons: List[Union[Model, dict]]) -> dict:
+    def _get_keyboard(buttons: List[Model]) -> dict:
         # TODO do refactoring
         vb_buttons = []
 
@@ -362,3 +360,5 @@ class Viber(BaseMessenger):
         }
 
         return keyboard
+
+    # endregion

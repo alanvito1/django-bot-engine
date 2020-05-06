@@ -17,33 +17,41 @@ def create_example_bot_menu(apps, schema_editor):
         message='This is a test bot project that implements the main '
                 'functionality of instant messaging services.\nThe code is '
                 'here https://github.com/terentjew-alexey/django-bot-engine/tree/master/example_project',
-        comment='About bot')
+        comment='About bot',
+        command='btn-about')
     back = Button.objects.using(db_alias).create(
         title='Back', text='Back',
-        message='Return to Sub-Menu #1')
+        message='Return to Sub-Menu #1',
+        command='btn-back')
     context = Button.objects.using(db_alias).create(
         title='Context', text='Context',
         message='This is your context data:',
         comment='Displays account context information.',
-        handler='handlers.bot_handlers.button_context')
+        handler='handlers.bot_handlers.button_context',
+        command='btn-context')
     exit = Button.objects.using(db_alias).create(
         title='Exit', text='Exit',
-        comment='To main menu')
+        comment='To main menu',
+        command='btn-exit')
     menu_info = Button.objects.using(db_alias).create(
         title='Menu info', text='Menu',
         message='You are in this menu:',
         comment='It displays information about the current menu of the account.',
-        handler='handlers.bot_handlers.button_menu')
+        handler='handlers.bot_handlers.button_menu',
+        command='btn-menu_info')
     reply_type = Button.objects.using(db_alias).create(
         title='Reply type', text='Reply',
-        handler='handlers.bot_handlers.button_answer_type')
+        handler='handlers.bot_handlers.button_answer_type',
+        command='btn-reply_type')
     submenu1_btn = Button.objects.using(db_alias).create(
         title='Submenu #1', text='Submenu',
         message='...',
-        comment='Go to submenu #1.')
+        comment='Go to submenu #1.',
+        command='btn-submenu1_btn')
     submenu2_btn = Button.objects.using(db_alias).create(
         title='Submenu #2', text='Go deeper',
-        comment='Go to submenu #2.')
+        comment='Go to submenu #2.',
+        command='btn-submenu2_btn')
 
     # Menus
     main_menu = Menu.objects.using(db_alias).create(

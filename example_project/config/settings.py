@@ -22,6 +22,7 @@ INSTALLED_APPS = [
     'django.contrib.sites',
     'django.contrib.postgres',
     'rest_framework',
+    'sortedm2m',
     'bot_engine',
     'handlers',
 ]

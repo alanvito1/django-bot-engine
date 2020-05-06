@@ -230,7 +230,7 @@ class MenuAdmin(admin.ModelAdmin):
     list_display = ('title', 'message', 'comment', 'updated')
     list_filter = ('updated', 'created')
     search_fields = ('title', 'message', 'comment', 'handler')
-    filter_horizontal = ('buttons', )
+    # filter_horizontal = ('buttons', )  # used sortedm2m
     fieldsets = (
         (None, {
             'fields': ('title', 'message', 'comment',
