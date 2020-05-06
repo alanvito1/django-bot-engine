@@ -27,7 +27,7 @@ class Migration(migrations.Migration):
                 ('handler', models.CharField(blank=True, default='', help_text='Your handler implementation must implement the bot_engine.bot_handlers.button_echo interface.', max_length=256, verbose_name='handler')),
                 ('for_staff', models.BooleanField(blank=True, default=False, help_text='Buttons with this flag are available only for user accounts of site staff (django.contrib.auth).', verbose_name='for staff users')),
                 ('for_admin', models.BooleanField(blank=True, default=False, help_text='Buttons with this flag are available only for user accounts of site admins (django.contrib.auth).', verbose_name='for admin users')),
-                ('command', models.CharField(default='', editable=False, max_length=256, verbose_name='command')),
+                ('command', models.CharField(default=None, editable=False, max_length=256, null=True, verbose_name='command')),
                 ('is_inline', models.BooleanField(default=False, help_text='Inline in message.', verbose_name='inline')),
                 ('is_active', models.BooleanField(default=True, verbose_name='active')),
                 ('updated', models.DateTimeField(auto_now=True, verbose_name='updated')),

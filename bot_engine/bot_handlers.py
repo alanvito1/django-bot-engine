@@ -12,6 +12,14 @@ def simple_echo(message: Message, account: Account):
     # TODO: implement the ability to add buttons to menu buttons
 
 
+@bot.handler
+def silent_handler(message: Message, account: Account):
+    """
+    A simple handler with no response and no action.
+    """
+    pass
+
+
 @bot.button_handler
 def button_echo(message: Message, account: Account):
     """

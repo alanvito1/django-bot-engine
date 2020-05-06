@@ -15,7 +15,7 @@ setup(
     author='Aleksey Terentyev',
     author_email='terentjew.alexey@gmail.com',
     install_requires=open('requirements.txt').readlines(),
-    packages=['bot_engine', 'bot_engine.messengers'],
+    packages=['bot_engine', 'bot_engine.messengers', 'bot_engine.migrations'],
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',
         'Framework :: Django',

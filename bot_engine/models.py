@@ -439,7 +439,7 @@ class Button(models.Model):
 
     command = models.CharField(
         _('command'), max_length=256,
-        default='', editable=False)
+        default=None, null=True, editable=False)
     is_inline = models.BooleanField(
         _('inline'), default=False,
         help_text=_('Inline in message.'))

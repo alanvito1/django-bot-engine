@@ -44,6 +44,9 @@ class HandlerChoiceField(forms.ChoiceField):
     """
     widget = HandlerSelectWidget
 
+    def valid_value(self, value):
+        return True
+
 
 class MessengerForm(forms.ModelForm):
     """
