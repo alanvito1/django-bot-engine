@@ -65,14 +65,15 @@ class MessengerForm(forms.ModelForm):
 
     def clean(self):
         data = super().clean()
-        handler_list = data.get('handler_list')
+        selected_handler = data.get('handler_list')
 
-        if handler_list:
-            data['handler'] = handler_list
+        if selected_handler:
+            data['handler'] = selected_handler
         if not data['handler']:
-            exc = forms.ValidationError(_('Need name of handler'))
-            self._errors['handler'] = self.error_class(exc.messages)
-            raise exc
+            data['handler'] = ''
+            # exc = forms.ValidationError(_('Need name of handler'))
+            # self._errors['handler'] = self.error_class(exc.messages)
+            # raise exc
 
         return data
 
@@ -208,14 +209,12 @@ class MenuForm(forms.ModelForm):
 
     def clean(self):
         data = super().clean()
-        handler_list = data.get('handler_list')
+        selected_handler = data.get('handler_list')
 
-        if handler_list:
-            data['handler'] = handler_list
+        if selected_handler:
+            data['handler'] = selected_handler
         if not data['handler']:
-            exc = forms.ValidationError(_('Need name of handler'))
-            self._errors['handler'] = self.error_class(exc.messages)
-            raise exc
+            data['handler'] = ''
 
         return data
 
@@ -280,14 +279,12 @@ class ButtonForm(forms.ModelForm):
 
     def clean(self):
         data = super().clean()
-        handler_list = data.get('handler_list')
+        selected_handler = data.get('handler_list')
 
-        if handler_list:
-            data['handler'] = handler_list
+        if selected_handler:
+            data['handler'] = selected_handler
         if not data['handler']:
-            exc = forms.ValidationError(_('Need name of handler'))
-            self._errors['handler'] = self.error_class(exc.messages)
-            raise exc
+            data['handler'] = ''
 
         return data
 

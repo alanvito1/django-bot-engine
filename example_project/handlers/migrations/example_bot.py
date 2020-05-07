@@ -72,9 +72,13 @@ def create_example_bot_menu(apps, schema_editor):
 
     # Add button targets
     back.next_menu = sub_menu1
+    back.save()
     exit.next_menu = main_menu
+    exit.save()
     submenu1_btn.next_menu = sub_menu1
+    submenu1_btn.save()
     submenu2_btn.next_menu = sub_menu2
+    submenu2_btn.save()
 
 
 def delete_example_bot_menu(apps, schema_editor):
