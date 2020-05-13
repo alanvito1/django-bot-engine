@@ -1,0 +1,300 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2020-05-12 13:41+0300\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: .\admin.py:56 .\admin.py:200 .\admin.py:270
+msgid "Handler (registered)"
+msgstr ""
+
+#: .\admin.py:59 .\admin.py:203 .\admin.py:273
+msgid "Handler (custom)"
+msgstr ""
+
+#: .\admin.py:99
+msgid "Authenticate"
+msgstr ""
+
+#: .\admin.py:103
+msgid "Proxy"
+msgstr ""
+
+#: .\admin.py:117 .\admin.py:129
+msgid "{rows_updated} messenger{pluralize(rows_updated)} "
+msgstr ""
+
+#: .\admin.py:123
+msgid "Enable webhook selected messengers"
+msgstr ""
+
+#: .\admin.py:133
+msgid "Disable webhook selected messengers"
+msgstr ""
+
+#: .\admin.py:173
+msgid "Info"
+msgstr ""
+
+#: .\admin.py:187
+msgid "Send ping"
+msgstr ""
+
+#: .\admin.py:192
+msgid "Update info"
+msgstr ""
+
+#: .\models.py:36 .\models.py:328 .\models.py:406
+msgid "title"
+msgstr ""
+
+#: .\models.py:37
+msgid "This name will be used as the sender name."
+msgstr ""
+
+#: .\models.py:39
+msgid "API type"
+msgstr ""
+
+#: .\models.py:43
+msgid "bot token"
+msgstr ""
+
+#: .\models.py:45
+msgid "Token or secret key."
+msgstr ""
+
+#: .\models.py:47
+msgid "proxy"
+msgstr ""
+
+#: .\models.py:49
+msgid ""
+"Enter proxy uri with format \"schema://user:password@proxy_address:port\""
+msgstr ""
+
+#: .\models.py:52
+msgid "logo"
+msgstr ""
+
+#: .\models.py:54
+msgid "Relative URL. Required for some messenger APIs: Viber."
+msgstr ""
+
+#: .\models.py:56
+msgid "welcome text"
+msgstr ""
+
+#: .\models.py:58
+msgid ""
+"Welcome message. Will be sent in response to the opening of the dialog (not "
+"a subscribe event). May be used with some messaging programs: Viber."
+msgstr ""
+
+#: .\models.py:63
+msgid "main handler"
+msgstr ""
+
+#: .\models.py:65
+msgid ""
+"It processes all messages that do not fall into the menu and button "
+"handlers. To implement a handler, "
+msgstr ""
+
+#: .\models.py:70
+msgid "main menu"
+msgstr ""
+
+#: .\models.py:72
+msgid "The root menu. For example, \"Home\"."
+msgstr ""
+
+#: .\models.py:75
+msgid "token hash"
+msgstr ""
+
+#: .\models.py:78 .\models.py:260 .\models.py:447
+msgid "active"
+msgstr ""
+
+#: .\models.py:80
+msgid ""
+"This flag changes when the webhook on the messenger API server is activated/"
+"deactivated."
+msgstr ""
+
+#: .\models.py:83 .\models.py:350 .\models.py:449
+msgid "updated"
+msgstr ""
+
+#: .\models.py:85 .\models.py:352 .\models.py:451
+msgid "created"
+msgstr ""
+
+#: .\models.py:88 .\models.py:248
+msgid "messenger"
+msgstr ""
+
+#: .\models.py:89
+msgid "messengers"
+msgstr ""
+
+#: .\models.py:228
+msgid "account id"
+msgstr ""
+
+#: .\models.py:231
+msgid "user name"
+msgstr ""
+
+#: .\models.py:234
+msgid "utm source"
+msgstr ""
+
+#: .\models.py:237
+msgid "information"
+msgstr ""
+
+#: .\models.py:240
+msgid "context"
+msgstr ""
+
+#: .\models.py:243
+msgid "phone"
+msgstr ""
+
+#: .\models.py:252
+msgid "current menu"
+msgstr ""
+
+#: .\models.py:256
+msgid "user"
+msgstr ""
+
+#: .\models.py:262
+msgid ""
+"This flag changes when the user account on the messenger API server is "
+"subscribed/unsubscribed."
+msgstr ""
+
+#: .\models.py:265
+msgid "last visit"
+msgstr ""
+
+#: .\models.py:267
+msgid "first visit"
+msgstr ""
+
+#: .\models.py:272
+msgid "account"
+msgstr ""
+
+#: .\models.py:273
+msgid "accounts"
+msgstr ""
+
+#: .\models.py:330 .\models.py:411
+msgid "message"
+msgstr ""
+
+#: .\models.py:332
+msgid ""
+"The text of the message sent when you get to this menu. If empty, nothing is "
+"sent."
+msgstr ""
+
+#: .\models.py:335 .\models.py:416
+msgid "comment"
+msgstr ""
+
+#: .\models.py:337 .\models.py:418
+msgid "Comment text. Does not affect functionality."
+msgstr ""
+
+#: .\models.py:339 .\models.py:421
+msgid "handler"
+msgstr ""
+
+#: .\models.py:341 .\models.py:423
+msgid "Your handler implementation must implement "
+msgstr ""
+
+#: .\models.py:347 .\models.py:455
+msgid "buttons"
+msgstr ""
+
+#: .\models.py:355
+msgid "menu"
+msgstr ""
+
+#: .\models.py:356
+msgid "menus"
+msgstr ""
+
+#: .\models.py:408
+msgid "text"
+msgstr ""
+
+#: .\models.py:409
+msgid "Button text displayed."
+msgstr ""
+
+#: .\models.py:413
+msgid ""
+"The text of the message sent during the processing of a button click. If "
+"empty, nothing is sent."
+msgstr ""
+
+#: .\models.py:427
+msgid "next menu"
+msgstr ""
+
+#: .\models.py:430
+msgid "for staff users"
+msgstr ""
+
+#: .\models.py:432
+msgid ""
+"Buttons with this flag are available only for user accounts of site staff "
+"(django.contrib.auth)."
+msgstr ""
+
+#: .\models.py:435
+msgid "for admin users"
+msgstr ""
+
+#: .\models.py:437
+msgid ""
+"Buttons with this flag are available only for user accounts of site admins "
+"(django.contrib.auth)."
+msgstr ""
+
+#: .\models.py:441
+msgid "command"
+msgstr ""
+
+#: .\models.py:444
+msgid "inline"
+msgstr ""
+
+#: .\models.py:445
+msgid "Inline in message."
+msgstr ""
+
+#: .\models.py:454
+msgid "button"
+msgstr ""

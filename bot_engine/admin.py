@@ -92,12 +92,11 @@ class MessengerAdmin(admin.ModelAdmin):
     actions = ('enable_webhook', 'disable_webhook')
     fieldsets = (
         (None, {
-            'fields': ('title', 'api_type', 'is_active', 'handler_list',
-                       'handler', 'welcome_text', 'menu', 'logo'),
+            'fields': ('title', 'api_type', 'token', 'is_active', 'logo'),
             'classes': ('extrapretty', 'wide'),
         }),
-        (_('Authenticate'), {
-            'fields': ('token', ),
+        (_('Control'), {
+            'fields': ('handler_list', 'handler', 'menu', 'welcome_text'),
             'classes': ('extrapretty', 'wide'),
         }),
         (_('Proxy'), {

@@ -128,6 +128,8 @@ class Messenger(models.Model):
             }
             account, created = Account.objects.get_or_create(id=message.user_id,
                                                              defaults=default)
+            if not account.menu and self.menu:
+                account.update(menu=self.menu)
             if created or not account.info:
                 account.update_info()
         else:
@@ -326,8 +328,8 @@ class Account(models.Model):
 class Menu(models.Model):
     title = models.CharField(
         _('title'), max_length=256)
-    message = models.CharField(
-        _('message'), max_length=1024,
+    message = models.TextField(
+        _('message'),
         null=True, blank=True,
         help_text=_('The text of the message sent when you get to this menu. '
                     'If empty, nothing is sent.'))
@@ -355,6 +357,7 @@ class Menu(models.Model):
         verbose_name = _('menu')
         verbose_name_plural = _('menus')
         unique_together = ('title', )
+        ordering = ('title', )
 
     def __str__(self):
         return self.title
@@ -407,8 +410,8 @@ class Button(models.Model):
     text = models.CharField(
         _('text'), max_length=256,
         help_text=_('Button text displayed.'))
-    message = models.CharField(
-        _('message'), max_length=1024,
+    message = models.TextField(
+        _('message'),
         null=True, blank=True,
         help_text=_('The text of the message sent during the processing of '
                     'a button click. If empty, nothing is sent.'))
@@ -454,6 +457,7 @@ class Button(models.Model):
         verbose_name = _('button')
         verbose_name_plural = _('buttons')
         unique_together = ('command', )
+        ordering = ('title', )
 
     def __str__(self):
         return self.title

@@ -26,8 +26,6 @@ class MessengerType(Enum):
     # WECHAT = 'wechat'
     # WHATSAPP = 'whatsapp'
 
-    # TODO: implement __new__() with auto-adding fields
-
     @classmethod
     def choices(cls) -> tuple:
         return tuple((x.value, _(x.value.capitalize())) for x in cls)
