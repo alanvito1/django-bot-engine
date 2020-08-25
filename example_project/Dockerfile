@@ -14,11 +14,12 @@ RUN apk update && apk add libpq && \
     pip install -U django djangorestframework && \
     apk del .build-deps
 
-RUN pip install -U https://github.com/terentjew-alexey/django-bot-engine/archive/develop.zip
+#RUN python -m pip install https://github.com/terentjew-alexey/django-bot-engine/archive/develop.zip
+RUN python -m pip install PySocks requests[socks] django-sortedm2m viberbot pyTelegramBotAPI
 
 WORKDIR /usr/src/app
 COPY . .
 
-EXPOSE 8000
+EXPOSE 8800
 
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8800"]

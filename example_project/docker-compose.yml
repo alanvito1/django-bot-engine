@@ -17,6 +17,6 @@ services:
     container_name: examplebot
     restart: always
     ports:
-      - 8000:8000
+      - 8800:8800
     volumes:
       - .:/usr/src/app/
