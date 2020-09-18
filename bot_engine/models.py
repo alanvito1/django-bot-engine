@@ -331,17 +331,16 @@ class Menu(models.Model):
     message = models.TextField(
         _('message'),
         null=True, blank=True,
-        help_text=_('The text of the message sent when you get to this menu. '
-                    'If empty, nothing is sent.'))
-    comment = models.CharField(
-        _('comment'), max_length=1024,
-        null=True, blank=True,
-        help_text=_('Comment text. Does not affect functionality.'))
+        help_text=_('The text of the message sent when you get to this menu.'))
     handler = models.CharField(
         _('handler'), max_length=256,
         default='', blank=True,
         help_text=_(f'Your handler implementation must implement '
                     f'the {ECHO_HANDLER} interface.'))
+    comment = models.TextField(
+        _('comment'),
+        null=True, blank=True,
+        help_text=_('Comment text. Does not affect functionality.'))
 
     buttons = SortedManyToManyField(
         'Button', blank=True,
@@ -414,17 +413,17 @@ class Button(models.Model):
         _('message'),
         null=True, blank=True,
         help_text=_('The text of the message sent during the processing of '
-                    'a button click. If empty, nothing is sent.'))
-    comment = models.CharField(
-        _('comment'), max_length=1024,
-        null=True, blank=True,
-        help_text=_('Comment text. Does not affect functionality.'))
-
+                    'a button click.'))
     handler = models.CharField(
         _('handler'), max_length=256,
         default='', blank=True,
         help_text=_(f'Your handler implementation must implement '
                     f'the {BUTTON_HANDLER} interface.'))
+    comment = models.TextField(
+        _('comment'), max_length=1024,
+        null=True, blank=True,
+        help_text=_('Comment text. Does not affect functionality.'))
+
     next_menu = models.ForeignKey(
         'Menu', models.SET_NULL,
         verbose_name=_('next menu'), related_name='from_buttons',

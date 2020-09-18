@@ -1,4 +1,5 @@
 from __future__ import annotations
+from dataclasses import dataclass
 from typing import List, Union
 
 from django.db.models import Model
@@ -40,53 +41,41 @@ class MessageType:
     )
 
 
+@dataclass
 class Message:
-    def __init__(self, message_type: str,
-                 message_id: str = None,
-                 user_id: str = None,
-                 im_type: str = None,
-                 timestamp: int = None,
-                 **kwargs):
-        self.type = message_type
-        self.id = message_id
-        self.user_id = user_id
-        self.timestamp = timestamp
-        self.im_type = im_type
+    type = message_type
+    id = None
+    user_id = None
+    timestamp = None
+    im_type = None
 
-        self.reply_to_id = None
+    reply_to_id = None
 
-        self.user_name = None
-        self.context = None
-        self.text = None
-        self.alt_text = None
-        self.rich_media = None
+    user_name = None
+    context = None
+    text = None
+    alt_text = None
+    rich_media = None
 
-        self.sticker_id = None
-        self.file_id = None
-        self.file_url = None
-        self.file_size = None
-        self.file_name = None
-        self.file_duration = None
-        self.mime_type = None
-        self.is_voice = None
-        self.is_video_note = None
+    sticker_id = None
+    file_id = None
+    file_url = None
+    file_size = None
+    file_name = None
+    file_duration = None
+    mime_type = None
+    is_voice = None
+    is_video_note = None
 
-        self.url = None
-        self.location = None
-        self.contact = None
-        self.buttons = None
-        self.inline_buttons = None
-
-        for key, value in kwargs.items():
-            setattr(self, key, value)
+    url = None
+    location = None
+    contact = None
+    buttons = None
+    inline_buttons = None
 
     def __str__(self) -> str:
         return f'Message({self.type}, id={self.id}, ' \
                f'im_type={self.im_type}, user={self.user_id})'
-
-    def __repr__(self) -> str:
-        return f'<bot_engine.Message object ' \
-               f'(type={self.type}, im_type={self.im_type})>'
 
     @property
     def is_common(self) -> bool:
@@ -184,7 +173,7 @@ class Message:
     @classmethod
     def picture(cls, file_url: str, file_size: int = None, file_name: str = None,
                 user_id: str = None, message_id: str = None, **kwargs):
-        return cls(MessageType.PICTURE,file_url=file_url,
+        return cls(MessageType.PICTURE, file_url=file_url,
                    file_size=file_size, file_name=file_name,
                    user_id=user_id, message_id=message_id, **kwargs)
 

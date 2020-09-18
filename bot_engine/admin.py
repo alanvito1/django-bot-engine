@@ -225,14 +225,15 @@ class MenuAdmin(admin.ModelAdmin):
     """
     form = MenuForm
 
-    list_display = ('title', 'message', 'comment', 'updated')
+    list_display = ('title', 'message', 'handler', 'comment', 'updated')
     list_filter = ('updated', 'created')
     search_fields = ('title', 'message', 'comment', 'handler')
+    readonly_fields = ('updated', )
     # filter_horizontal = ('buttons', )  # used sortedm2m
     fieldsets = (
         (None, {
-            'fields': ('title', 'message', 'comment',
-                       'handler_list', 'handler', 'buttons'),
+            'fields': ('title', 'message', 'handler_list', 'handler',
+                       'buttons', 'comment'),
             'classes': ('extrapretty', 'wide'),
         }),
     )
@@ -295,16 +296,18 @@ class ButtonAdmin(admin.ModelAdmin):
     """
     form = ButtonForm
 
-    list_display = ('title', 'text', 'comment', 'next_menu',
-                    'is_inline', 'for_staff', 'for_admin', 'is_active')
+    list_display = ('title', 'text', 'handler', 'next_menu',
+                    'is_inline', 'for_staff', 'for_admin', 'is_active',
+                    'comment', 'updated')
     list_filter = ('is_inline', 'for_staff', 'for_admin', 'is_active')
     search_fields = ('title', 'text', 'message', 'comment', 'command')
-    readonly_fields = ('command', )
+    readonly_fields = ('command', 'updated', )
     fieldsets = (
         (None, {
-            'fields': ('title', 'text', 'command', 'message', 'comment',
+            'fields': ('title', 'text', 'command', 'message',
                        'handler_list', 'handler', 'next_menu',
-                       ('for_staff', 'for_admin'), ('is_inline', 'is_active')),
+                       'is_inline', 'for_staff', 'for_admin', 'is_active',
+                       'comment'),
             'classes': ('extrapretty', 'wide'),
         }),
     )
