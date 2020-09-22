@@ -1,4 +1,5 @@
 
+
 class BotApiError(Exception):
     """
     Bot API exception class

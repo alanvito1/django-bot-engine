@@ -43,7 +43,7 @@ class MessageType:
 
 @dataclass
 class Message:
-    type = message_type
+    type = MessageType.TEXT
     id = None
     user_id = None
     timestamp = None

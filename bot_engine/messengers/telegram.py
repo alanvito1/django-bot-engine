@@ -1,11 +1,9 @@
+import json
 import logging
 from typing import Any, Dict, List, Union
 
-from django.conf import settings
-from django.contrib.sites.models import Site
-from django.db.models import Model
-from rest_framework.request import Request
-# TODO: Independently implement or find a project with a more permissive license
+from django.http.request import HttpRequest
+# TODO: change tg api implementation to telethon
 from telebot import apihelper, types
 
 from .base_messenger import BaseMessenger
@@ -20,10 +18,7 @@ class Telegram(BaseMessenger):
     """
     IM connector for Telegram Bot API
     """
-
-    #############
-    # Interface #
-    #############
+    # region Interface
 
     def __init__(self, token: str, **kwargs):
         super().__init__(token, **kwargs)
@@ -87,8 +82,8 @@ class Telegram(BaseMessenger):
             'info': data
         }
 
-    def parse_message(self, request: Request) -> Message:
-        r_data = request.data
+    def parse_message(self, request: HttpRequest) -> Message:
+        r_data = json.loads(request.body)
 
         return self._from_tg_message(r_data)
 
@@ -111,9 +106,9 @@ class Telegram(BaseMessenger):
 
         return message_ids
 
-    ################
-    # Help methods #
-    ################
+    # endregion
+
+    # region Help methods
 
     def _from_tg_message(self, update: dict) -> Message:
         # update = {
@@ -511,6 +506,8 @@ class Telegram(BaseMessenger):
     #     with open(f'{settings.MEDIA_ROOT}tg/{file_name}', 'wb') as fd:
     #         fd.write(file)
     #     return file_url
+
+    # endregion
 
     # getMe
     # sendMessage

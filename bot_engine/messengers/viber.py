@@ -1,10 +1,11 @@
+import json
 import logging
 from typing import Any, Dict, List, Union
 
 from django.contrib.sites.models import Site
 from django.db.models import Model
 from django.utils import timezone
-from rest_framework.request import Request
+from django.http.request import HttpRequest
 from viberbot import Api
 from viberbot.api.bot_configuration import BotConfiguration
 from viberbot.api import messages as v_messages
@@ -25,7 +26,6 @@ class Viber(BaseMessenger):
     """
     IM connector for Viber REST API
     """
-
     # region Interface
 
     def __init__(self, token: str, **kwargs):
@@ -114,16 +114,15 @@ class Viber(BaseMessenger):
             'info': data,
         }
 
-    def parse_message(self, request: Request) -> Message:
-        # NOTE: There is no way to get the body
-        #       after processing the request in DRF.
-        # # Verify signature
-        # sign = request.META.get('HTTP_X_VIBER_CONTENT_SIGNATURE')
-        # if not self.bot.verify_signature(request.body, sign):
-        #     raise IMApiException(f'Viber message not verified; '
-        #                          f'Data={request.data}; Sign={sign};')
+    def parse_message(self, request: HttpRequest) -> Message:
+        # Verify signature
+        sign = request.META.get('HTTP_X_VIBER_CONTENT_SIGNATURE')
+        data = json.loads(request.body)
+        if not self.bot.verify_signature(request.body, sign):
+            raise MessengerException(f'Viber message not verified; '
+                                     f'Data={data}; Sign={sign};')
 
-        vb_request = v_requests.create_request(request.data)
+        vb_request = v_requests.create_request(data)
 
         return self._from_viber_message(vb_request)
 

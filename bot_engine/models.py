@@ -5,16 +5,14 @@ from typing import Any, Callable, List, Optional, Type
 from uuid import uuid4
 
 from django.conf import settings
-# TODO make a custom JSONField inherited from TextField for others db's
-from django.contrib.postgres.fields import JSONField
 from django.contrib.sites.models import Site
 from django.db import models
 from django.db.models import Q
+from django.http.request import HttpRequest
 from django.urls import reverse
 from django.utils.module_loading import import_string
 from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
-from rest_framework.request import Request
 from sortedm2m.fields import SortedManyToManyField
 
 from .errors import MessengerException, NotSubscribed, RequestsLimitExceeded
@@ -109,10 +107,10 @@ class Messenger(models.Model):
             self.save()
         return self.hash
 
-    def dispatch(self, request: Request) -> Optional[Any]:
+    def dispatch(self, request: HttpRequest) -> Optional[Any]:
         """
         Entry point for current messenger account
-        :param request: Rest framework request object
+        :param request: Django request object
         :return: Answer data (optional)
         """
         message = self.api.parse_message(request)
@@ -235,10 +233,10 @@ class Account(models.Model):
     utm_source = models.CharField(
         _('utm source'), max_length=256,
         null=True, blank=True)
-    info = JSONField(
+    info = models.JSONField(
         _('information'),
         default=dict, blank=True)
-    context = JSONField(
+    context = models.JSONField(
         _('context'),
         default=dict, blank=True)
     phone = models.CharField(
