@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 from setuptools import setup
 
-from bot_engine import __version__
+exec(open('bot_engine/__init__.py').read())
 
 
 setup(

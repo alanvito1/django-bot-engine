@@ -57,7 +57,8 @@ class MessengerWebhook(View):
             else:
                 answer, content_type = b'', None
         except Messenger.DoesNotExist as err:
-            log.exception(f'Messenger not found; Hash={im_hash}; Error={err};')
+            log.exception(f'Bot Engine Webhook; Messenger not found; '
+                          f'Hash={im_hash}; Error={err};')
             return HttpResponseNotFound('Webhook not found.')
         except Exception as err:
             log.exception(f'Bot Engine Webhook; Hash={im_hash}; Error={err};')

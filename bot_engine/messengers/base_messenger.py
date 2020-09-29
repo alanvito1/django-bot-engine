@@ -7,7 +7,7 @@ from ..types import Message
 
 class BaseMessenger:
     """
-    Base class for IM connector
+    Base class for IM API connector
     """
 
     def __init__(self, token: str, **kwargs):

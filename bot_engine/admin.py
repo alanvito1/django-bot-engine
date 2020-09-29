@@ -8,7 +8,7 @@ from django.utils.translation import gettext_lazy as _
 
 from . import bot
 from .models import Messenger, Account, Menu, Button
-from .types import Message
+from .types import Text
 
 
 log = logging.getLogger(__name__)
@@ -182,7 +182,7 @@ class AccountAdmin(admin.ModelAdmin):
     def send_ping(self, request, queryset):
         # TODO: implement checking subscription or ping message (mb. user_info?)
         for account in queryset:
-            account.send_message(Message.text('ping'))
+            account.send_message(Text(text='ping'))
     send_ping.short_description = _('Send ping')
 
     def update_info(self, request, queryset):
