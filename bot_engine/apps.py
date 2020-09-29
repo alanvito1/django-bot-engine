@@ -6,6 +6,5 @@ class BotEngineConfig(AppConfig):
     label = 'bot_engine'
     verbose_name = 'Django Bot Engine'
 
-    # def ready(self):
-    #     # TODO implement autodiscover handlers
-    #     self.module.autodiscover('bot_handlers')
+    def ready(self):
+        self.module.autodiscover()

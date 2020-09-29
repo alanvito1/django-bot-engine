@@ -1,13 +1,13 @@
 from typing import Any, Dict, List, Optional, Union
 
-from rest_framework.request import Request
+from django.http.request import HttpRequest
 
 from ..types import Message
 
 
 class BaseMessenger:
     """
-    Base class for IM connector
+    Base class for IM API connector
     """
 
     def __init__(self, token: str, **kwargs):
@@ -47,10 +47,10 @@ class BaseMessenger:
         """
         raise NotImplementedError('`get_user_info()` must be implemented.')
 
-    def parse_message(self, request: Request) -> Message:
+    def parse_message(self, request: HttpRequest) -> Message:
         """
         Parse incoming message
-        :param request: rest_framework.Request object
+        :param request: Django HttpRequest object
         :return: Message object
         """
         raise NotImplementedError('`_parse_message()` must be implemented.')

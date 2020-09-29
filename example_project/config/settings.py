@@ -6,7 +6,7 @@ SECRET_KEY = 'rb35h78hk40k7uu4p9jw0plr+)96u-y9yc0^x@q-)ems=&tql5'
 DEBUG = True
 
 SITE_ID = 1
-ROOT_URLCONF = 'examplebot.urls'
+ROOT_URLCONF = 'config.urls'
 
 ALLOWED_HOSTS = [
     'example.com'
@@ -22,6 +22,7 @@ INSTALLED_APPS = [
     'django.contrib.sites',
     'django.contrib.postgres',
     'rest_framework',
+    'sortedm2m',
     'bot_engine',
     'handlers',
 ]
@@ -43,7 +44,6 @@ TEMPLATES = [
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
-                'django.template.context_processors.debug',
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
@@ -52,7 +52,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'examplebot.wsgi.application'
+WSGI_APPLICATION = 'config.wsgi.application'
 
 
 # Database
@@ -64,7 +64,7 @@ DATABASES = {
         'NAME': 'examplebot',
         'USER': 'examplebot',
         'PASSWORD': 'examplebotPa$S',
-        'HOST': 'localhost',
+        'HOST': 'postgres',
         'PORT': '5432',
     }
 }
@@ -154,7 +154,7 @@ LOGGING = {
             'handlers': ['file_site'],
             'level': 'DEBUG',
         },
-        'examplebot': {
+        'config': {
             'handlers': ['file_site'],
             'level': 'DEBUG',
         },

@@ -5,30 +5,50 @@ from typing import Any, Callable, List, Optional, Type
 from uuid import uuid4
 
 from django.conf import settings
-# TODO make a custom JSONField inherited from TextField for others db's
-from django.contrib.postgres.fields import JSONField
 from django.contrib.sites.models import Site
 from django.db import models
 from django.db.models import Q
+from django.http.request import HttpRequest
 from django.urls import reverse
 from django.utils.module_loading import import_string
 from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
-from rest_framework.request import Request
+from sortedm2m.fields import SortedManyToManyField
 
 from .errors import MessengerException, NotSubscribed, RequestsLimitExceeded
-from .messengers import BaseMessenger, MessengerType
-from .types import Message, MessageType
+from .messengers import BaseMessenger
+from .types import Message, Event, EType, Text, Button as MButton
 
 
 __all__ = ('Account', 'Button', 'Menu', 'Messenger')
 
 log = logging.getLogger(__name__)
 
-DOMAIN = Site.objects.get_current().domain
-BASE_HANDLER = 'bot_engine.bot_handlers.echo_handler'
-BUTTON_HANDLER = 'bot_engine.bot_handlers.echo_handler'
-ECHO_HANDLER = 'bot_engine.bot_handlers.echo_handler'
+ECHO_HANDLER = 'bot_engine.bot_handlers.simple_echo'
+BUTTON_HANDLER = 'bot_engine.bot_handlers.button_echo'
+BASE_HANDLER = ECHO_HANDLER
+
+
+class MessengerType(models.TextChoices):
+    NONE = 'none'
+    # MESSENGER = 'messenger'
+    # SKYPE = 'skype'
+    # SLACK = 'slack'
+    TELEGRAM = 'telegram'
+    VIBER = 'viber'
+    # WECHAT = 'wechat'
+    # WHATSAPP = 'whatsapp'
+
+    @classmethod
+    def messenger_classes(cls) -> dict:
+        return {m_type: f'bot_engine.messengers.{m_type}.{m_type.capitalize()}'
+                for m_type in cls if m_type != cls.NONE}
+
+    @property
+    def messenger_class(self) -> Optional[Type[BaseMessenger]]:
+        if self == MessengerType.NONE:
+            return None
+        return import_string(f'bot_engine.messengers.{self}.{self.capitalize()}')
 
 
 class Messenger(models.Model):
@@ -37,8 +57,8 @@ class Messenger(models.Model):
         help_text=_('This name will be used as the sender name.'))
     api_type = models.CharField(
         _('API type'), max_length=256,
-        choices=MessengerType.choices(),
-        default=MessengerType.NONE.value)
+        choices=MessengerType.choices,
+        default=MessengerType.NONE)
     token = models.CharField(
         _('bot token'), max_length=256,
         default='', blank=True,
@@ -61,8 +81,7 @@ class Messenger(models.Model):
 
     handler = models.CharField(
         _('main handler'), max_length=256,
-        # choices=_handler_choices,
-        default=ECHO_HANDLER,
+        default=BASE_HANDLER, blank=True,
         help_text=_('It processes all messages that do not fall into '
                     'the menu and button handlers. To implement a handler, '
                     f'implement a {BASE_HANDLER} interface.'))
@@ -110,10 +129,10 @@ class Messenger(models.Model):
             self.save()
         return self.hash
 
-    def dispatch(self, request: Request) -> Optional[Any]:
+    def dispatch(self, request: HttpRequest) -> Optional[Any]:
         """
         Entry point for current messenger account
-        :param request: Rest framework request object
+        :param request: Django request object
         :return: Answer data (optional)
         """
         message = self.api.parse_message(request)
@@ -121,34 +140,38 @@ class Messenger(models.Model):
         log.debug(f'Dispatch; Incoming message={message};')
 
         if message.user_id:
+            user_id = message.user_id
             default = {
-                'username': message.user_name or message.user_id,
+                'username': getattr(message, 'user_name', None) or user_id,
                 'messenger': self,
                 'menu': self.menu,
                 'is_active': True,
             }
-            account, created = Account.objects.get_or_create(id=message.user_id,
-                                                             defaults=default)
+            account, created = Account.objects.get_or_create(
+                id=user_id, defaults=default
+            )
+            if not account.menu and self.menu:
+                account.update(menu=self.menu)
             if created or not account.info:
                 account.update_info()
         else:
             account = None
 
-        # log.debug(f'Dispatch; Message={message}; Account={account};')
+        log.debug(f'Dispatch; {message=}; {account=};')
 
-        if message.is_service:
+        if isinstance(message, Event):
             # TODO make service handler
-            if (message.type == MessageType.START and account
-                    and self.welcome_text):
-                account.send_message(Message.text(text=self.welcome_text))
+            if (message.event_type == EType.START
+                    and account and self.welcome_text):
+                account.send_message(Text(text=self.welcome_text))
                 return self.api.welcome_message(self.welcome_text)
-            elif message.type == MessageType.UNSUBSCRIBED and account:
+            elif message.event_type == EType.UNSUBSCRIBED and account:
                 account.update(is_active=False)
-            # self.process_service_message(message, account)
-            return None
+            return self.process_service_message(message, account)
 
         message = self.preprocess_message(message, account)
 
+        log.debug(f'Dispatch; {message=}; {account=};')
         if account.menu:
             account.menu.process_message(message, account)
         else:
@@ -167,10 +190,12 @@ class Messenger(models.Model):
             return message
 
         if (self.api_type in [MessengerType.TELEGRAM.value] and
-                message.type == MessageType.TEXT and account.menu):
+                isinstance(message, Text) and account.menu):
             for button in account.menu.buttons.all():
                 if message.text == button.text:
-                    message.type = MessageType.BUTTON
+                    message = MButton(text=message.text,
+                                      command=message.text)
+                    break
 
         return message
 
@@ -184,6 +209,15 @@ class Messenger(models.Model):
         if self.handler:
             self.call_handler(message, account)
 
+    def process_service_message(self, message: Message, account: Account):
+        """
+        Process the system message.
+        :param message: bot_engine.Massage object
+        :param account: bot_engine.Account object
+        :return: None
+        """
+        pass
+
     @property
     def call_handler(self) -> Callable:
         # importing handler or hot reloading
@@ -193,8 +227,9 @@ class Messenger(models.Model):
         return self._handler
 
     def enable_webhook(self):
+        domain = Site.objects.get_current().domain
         url = reverse('bot_engine:webhook', kwargs={'hash': self.token_hash})
-        return self.api.enable_webhook(url=f'https://{DOMAIN}{url}')
+        return self.api.enable_webhook(url=f'https://{domain}{url}')
 
     def disable_webhook(self):
         return self.api.disable_webhook()
@@ -202,10 +237,11 @@ class Messenger(models.Model):
     @property
     def api(self) -> BaseMessenger:
         if not hasattr(self, '_api'):
+            domain = Site.objects.get_current().domain
             url = self.logo
             self._api = self._api_class(
                 self.token, proxy=self.proxy, name=self.title,
-                avatar=f'https://{DOMAIN}{url}'
+                avatar=f'https://{domain}{url}'
             )
         return self._api
 
@@ -232,10 +268,10 @@ class Account(models.Model):
     utm_source = models.CharField(
         _('utm source'), max_length=256,
         null=True, blank=True)
-    info = JSONField(
+    info = models.JSONField(
         _('information'),
         default=dict, blank=True)
-    context = JSONField(
+    context = models.JSONField(
         _('context'),
         default=dict, blank=True)
     phone = models.CharField(
@@ -289,8 +325,8 @@ class Account(models.Model):
         return self.info.get('avatar') or ''
 
     def send_message(self, message: Message,
-                     buttons: List[Button] = None,
-                     i_buttons: List[Button] = None):
+                     buttons: List[MButton] = None,
+                     i_buttons: List[MButton] = None):
         # TODO simplify
         if buttons:
             message.buttons = message.buttons or [] + buttons
@@ -324,25 +360,24 @@ class Account(models.Model):
 
 class Menu(models.Model):
     title = models.CharField(
-        _('title'), max_length=256)
-    message = models.CharField(
-        _('message'), max_length=1024,
+        _('title'), max_length=256, unique=True)
+    message = models.TextField(
+        _('message'),
         null=True, blank=True,
-        help_text=_('The text of the message sent when you get to this menu. '
-                    'If empty, nothing is sent.'))
-    comment = models.CharField(
-        _('comment'), max_length=1024,
-        null=True, blank=True,
-        help_text=_('Comment text. Does not affect functionality.'))
+        help_text=_('The text of the message sent when you get to this menu.'))
     handler = models.CharField(
         _('handler'), max_length=256,
-        default=ECHO_HANDLER, blank=True,
+        default='', blank=True,
         help_text=_(f'Your handler implementation must implement '
-                    f'the {BASE_HANDLER} interface.'))
+                    f'the {ECHO_HANDLER} interface.'))
+    comment = models.TextField(
+        _('comment'),
+        null=True, blank=True,
+        help_text=_('Comment text. Does not affect functionality.'))
 
-    # TODO: implement button order
-    buttons = models.ManyToManyField(
+    buttons = SortedManyToManyField(
         'Button', blank=True,
+        sort_value_field_name='order',
         verbose_name=_('buttons'), related_name='menus')
 
     updated = models.DateTimeField(
@@ -353,7 +388,6 @@ class Menu(models.Model):
     class Meta:
         verbose_name = _('menu')
         verbose_name_plural = _('menus')
-        unique_together = ('title', )
 
     def __str__(self):
         return self.title
@@ -370,12 +404,16 @@ class Menu(models.Model):
         """
         # TODO check process
         # TODO make permissions filter
-        if message.is_button:
-            buttons = self.buttons.filter(Q(command=message.text) |
-                                          Q(text=message.text)).all()
-            if len(buttons) == 0:
-                buttons = Button.objects.filter(Q(command=message.text) |
+        if isinstance(message, MButton):
+            log.debug(f'Menu.process_message; {message.text=} '
+                      f'{message.command=}; {self.buttons=};')
+
+            if len(self.buttons.all()) == 0:
+                buttons = Button.objects.filter(Q(command=message.command) |
                                                 Q(text=message.text)).all()
+            else:
+                buttons = self.buttons.filter(Q(command=message.command) |
+                                              Q(text=message.text)).all()
 
             if buttons:
                 return buttons[0].process_button(message, account)
@@ -405,23 +443,22 @@ class Button(models.Model):
         _('title'), max_length=256)
     text = models.CharField(
         _('text'), max_length=256,
-        help_text=_('Button text.'))
-    message = models.CharField(
-        _('message'), max_length=1024,
+        help_text=_('Button text displayed.'))
+    message = models.TextField(
+        _('message'),
         null=True, blank=True,
         help_text=_('The text of the message sent during the processing of '
-                    'a button click. If empty, nothing is sent.'))
-    comment = models.CharField(
+                    'a button click.'))
+    handler = models.CharField(
+        _('handler'), max_length=256,
+        default='', blank=True,
+        help_text=_(f'Your handler implementation must implement '
+                    f'the {BUTTON_HANDLER} interface.'))
+    comment = models.TextField(
         _('comment'), max_length=1024,
         null=True, blank=True,
         help_text=_('Comment text. Does not affect functionality.'))
 
-    handler = models.CharField(
-        _('handler'), max_length=256,
-        # default=ECHO_HANDLER,
-        blank=True,
-        help_text=_(f'Your handler implementation must implement '
-                    f'the {BUTTON_HANDLER} interface.'))
     next_menu = models.ForeignKey(
         'Menu', models.SET_NULL,
         verbose_name=_('next menu'), related_name='from_buttons',
@@ -438,8 +475,8 @@ class Button(models.Model):
                     'accounts of site admins (django.contrib.auth).'))
 
     command = models.CharField(
-        _('command'), max_length=256,
-        default='', editable=False)
+        _('command'), max_length=256, unique=True,
+        default=None, null=True, editable=False)
     is_inline = models.BooleanField(
         _('inline'), default=False,
         help_text=_('Inline in message.'))
@@ -453,7 +490,6 @@ class Button(models.Model):
     class Meta:
         verbose_name = _('button')
         verbose_name_plural = _('buttons')
-        unique_together = ('command', )
 
     def __str__(self):
         return self.title
@@ -461,7 +497,7 @@ class Button(models.Model):
     def __repr__(self):
         return f'<bot_engine.Button object ({self.command})>'
 
-    def process_button(self, message: Message, account: Account):
+    def process_button(self, message: MButton, account: Account):
         """
         Process the message with a bound handler.
         :param message: new incoming massage object
@@ -470,7 +506,7 @@ class Button(models.Model):
         """
         # TODO check process
         if self.message:
-            account.send_message(Message.text(self.message))
+            account.send_message(Text(text=self.message))
 
         if self.next_menu:
             account.update(menu=self.next_menu)
@@ -478,9 +514,9 @@ class Button(models.Model):
             btn_list = list(self.next_menu.buttons.all()) or None
             if self.next_menu.message:
                 msg_text = self.next_menu.message
-                account.send_message(Message.text(msg_text), buttons=btn_list)
+                account.send_message(Text(text=msg_text), buttons=btn_list)
             else:
-                account.send_message(Message.keyboard(btn_list))
+                account.send_message(Message(buttons=btn_list))
 
         if self.handler:
             self.call_handler(message, account)
